@@ -1,6 +1,7 @@
 import type { Issue } from "@/types/issue";
 import type { DataTableColumn } from "@/components/data-table/types";
 import { formatDisplayDate, formatCount, sanitizeText } from "@/components/data-table/cells";
+import { formatReplacementDbValueForDisplay } from "@/lib/replacements-value-mapper";
 
 function cellText(row: Issue, colId: string): string {
   switch (colId) {
@@ -8,6 +9,8 @@ function cellText(row: Issue, colId: string): string {
       return sanitizeText(row.vehicleNumber);
     case "deviceImei":
       return sanitizeText(row.deviceImei);
+    case "deviceTickets":
+      return sanitizeText(row.deviceTickets);
     case "softwareVersion":
       return sanitizeText(row.softwareVersion);
     case "flespiStatus":
@@ -50,15 +53,16 @@ function cellText(row: Issue, colId: string): string {
       return formatCount(row.lifetime);
     case "summarySsd":
       return sanitizeText(row.summarySsd);
-    case "newSsd":
-    case "newMotherboard":
-    case "newSataCable":
+    case "ssd":
+    case "motherboard":
+    case "sataCable":
+      return sanitizeText(row[colId as keyof Issue] as string | null);
     case "imeiChanged":
+      return formatReplacementDbValueForDisplay(row.imeiChanged);
     case "simChanged":
-    case "deviceChanged": {
-      const v = row[colId as keyof Issue] as boolean | null;
-      return v === null ? "—" : v ? "Yes" : "No";
-    }
+      return formatReplacementDbValueForDisplay(row.simChanged);
+    case "deviceChanged":
+      return row.deviceChanged ? "Yes" : "No";
     case "createdAt":
       return formatDisplayDate(row.createdAt);
     case "description":
@@ -97,6 +101,7 @@ export function copyIssueRowToClipboard(row: Issue): string {
   const lines = [
     `Vehicle: ${sanitizeText(row.vehicleNumber)}`,
     `IMEI: ${sanitizeText(row.deviceImei)}`,
+    `Tickets: ${sanitizeText(row.deviceTickets)}`,
     `Type: ${sanitizeText(row.issueType)}`,
     `Source: ${sanitizeText(row.issueSource)}`,
     `Created: ${formatDisplayDate(row.createdAt)}`,

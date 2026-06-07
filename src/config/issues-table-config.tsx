@@ -1,5 +1,7 @@
 import type { Issue } from "@/types/issue";
 import type { DataTableColumnGroup } from "@/components/data-table/types";
+import { coerceDbBoolean } from "@/lib/coerce-db-boolean";
+import { formatReplacementDbValueForDisplay } from "@/lib/replacements-value-mapper";
 import {
   BoolPill,
   CellWrap,
@@ -9,6 +11,7 @@ import {
   sanitizeText,
   StatusPill,
 } from "@/components/data-table/cells";
+import { DeviceTicketsDisplay } from "@/components/issues/DeviceTicketsDisplay";
 
 const text = (v: string | null | undefined) => <CellWrap>{sanitizeText(v)}</CellWrap>;
 const status = (v: string | null | undefined) => {
@@ -20,7 +23,15 @@ const issueType = (v: string) => {
   return t === "—" ? <CellWrap>—</CellWrap> : <StatusPill value={t} variant="issue" />;
 };
 const bool = (v: boolean | null | undefined) =>
-  v === null || v === undefined ? <CellWrap>—</CellWrap> : <BoolPill value={v} />;
+  v === null || v === undefined ? (
+    <CellWrap>—</CellWrap>
+  ) : (
+    <BoolPill value={coerceDbBoolean(v)} />
+  );
+
+const replacementDbValue = (v: boolean | string | number | null | undefined) => (
+  <CellWrap>{formatReplacementDbValueForDisplay(v)}</CellWrap>
+);
 
 export const ISSUES_TABLE_GROUPS: DataTableColumnGroup<Issue>[] = [
   {
@@ -55,6 +66,17 @@ export const ISSUES_TABLE_GROUPS: DataTableColumnGroup<Issue>[] = [
           </span>
         ),
       },
+      {
+        id: "deviceTickets",
+        label: "Tickets",
+        className: "min-w-[8rem] w-[140px]",
+        sortValue: (r) => r.deviceTickets ?? "",
+        render: (r) => (
+          <CellWrap>
+            <DeviceTicketsDisplay value={r.deviceTickets} className="text-xs" />
+          </CellWrap>
+        ),
+      },
     ],
   },
   {
@@ -63,42 +85,42 @@ export const ISSUES_TABLE_GROUPS: DataTableColumnGroup<Issue>[] = [
     columns: [
       {
         id: "softwareVersion",
-        label: "Software",
+        label: "software_version",
         className: "min-w-[7.5rem] w-[120px]",
         sortValue: (r) => r.softwareVersion ?? "",
         render: (r) => text(r.softwareVersion),
       },
       {
         id: "flespiStatus",
-        label: "Flespi",
+        label: "flespi_status",
         className: "w-[100px]",
         sortValue: (r) => r.flespiStatus ?? "",
         render: (r) => status(r.flespiStatus),
       },
       {
         id: "screenStatus",
-        label: "Screen",
+        label: "screen_status",
         className: "w-[100px]",
         sortValue: (r) => r.screenStatus ?? "",
         render: (r) => status(r.screenStatus),
       },
       {
         id: "dotMatrixStatus",
-        label: "Dot Matrix",
+        label: "dotmatrix_status",
         className: "w-[110px]",
         sortValue: (r) => r.dotMatrixStatus ?? "",
         render: (r) => status(r.dotMatrixStatus),
       },
       {
         id: "sshStatus",
-        label: "SSH",
+        label: "ssh_status",
         className: "w-[88px]",
         sortValue: (r) => r.sshStatus ?? null,
         render: (r) => bool(r.sshStatus),
       },
       {
         id: "pmmSoftware",
-        label: "PMM SW",
+        label: "pmm_software",
         className: "w-[90px]",
         sortable: false,
         render: (r) => <CellWrap>{formatCount(r.pmmSoftware)}</CellWrap>,
@@ -232,34 +254,34 @@ export const ISSUES_TABLE_GROUPS: DataTableColumnGroup<Issue>[] = [
     id: "replacements",
     label: "Replacements",
     columns: [
-      { id: "newSsd", label: "New SSD", className: "w-[88px]", sortable: false, render: (r) => bool(r.newSsd) },
+      { id: "ssd", label: "SSD", className: "w-[88px]", sortable: false, render: (r) => text(r.ssd) },
       {
-        id: "newMotherboard",
-        label: "New MB",
+        id: "motherboard",
+        label: "MB Repl.",
         className: "w-[88px]",
         sortable: false,
-        render: (r) => bool(r.newMotherboard),
+        render: (r) => text(r.motherboard),
       },
       {
-        id: "newSataCable",
+        id: "sataCable",
         label: "SATA",
         className: "w-[80px]",
         sortable: false,
-        render: (r) => bool(r.newSataCable),
+        render: (r) => text(r.sataCable),
       },
       {
         id: "imeiChanged",
         label: "IMEI Δ",
         className: "w-[88px]",
         sortable: false,
-        render: (r) => bool(r.imeiChanged),
+        render: (r) => replacementDbValue(r.imeiChanged),
       },
       {
         id: "simChanged",
         label: "SIM Δ",
         className: "w-[80px]",
         sortable: false,
-        render: (r) => bool(r.simChanged),
+        render: (r) => replacementDbValue(r.simChanged),
       },
       {
         id: "deviceChanged",

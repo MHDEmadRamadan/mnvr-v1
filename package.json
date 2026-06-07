@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:maintenance-rpc": "tsx scripts/test-maintenance-rpc.ts",
+    "test": "tsx --test src/lib/coerce-db-boolean.test.ts src/lib/replacements-value-mapper.test.ts src/lib/maintenance-form-audit.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
@@ -14,7 +16,9 @@
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-window": "^2.2.7"
+    "react-window": "^2.2.7",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -22,9 +26,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-window": "^2.0.0",
+    "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.22.4",
+    "typescript": "^5",
+    "ws": "^8.21.0"
   }
 }

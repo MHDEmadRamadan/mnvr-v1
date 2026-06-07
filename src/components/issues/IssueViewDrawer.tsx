@@ -11,6 +11,7 @@ import {
   sanitizeText,
   StatusPill,
 } from "@/components/data-table/cells";
+import { DeviceTicketsDisplay } from "@/components/issues/DeviceTicketsDisplay";
 
 type IssueViewDrawerProps = {
   open: boolean;
@@ -120,21 +121,24 @@ export function IssueViewDrawer({ open, issue, onClose, onEdit }: IssueViewDrawe
         <Section title="Device Information">
           <TextField label="Vehicle Number" value={issue.vehicleNumber} />
           <TextField label="IMEI" value={issue.deviceImei} />
+          <Field label="Tickets">
+            <DeviceTicketsDisplay value={issue.deviceTickets} />
+          </Field>
           <TextField label="Software Version" value={issue.softwareVersion} />
         </Section>
 
         <Section title="Device Status">
-          <StatusField label="Flespi" value={issue.flespiStatus} />
-          <StatusField label="Screen" value={issue.screenStatus} />
-          <StatusField label="Dot Matrix" value={issue.dotMatrixStatus} />
-          <Field label="SSH">
+          <StatusField label="flespi_status" value={issue.flespiStatus} />
+          <StatusField label="screen_status" value={issue.screenStatus} />
+          <StatusField label="dotmatrix_status" value={issue.dotMatrixStatus} />
+          <Field label="ssh_status">
             {issue.sshStatus === null || issue.sshStatus === undefined ? (
               <span className="text-zinc-400">—</span>
             ) : (
               <BoolPill value={issue.sshStatus} />
             )}
           </Field>
-          <Field label="PMM Software">
+          <Field label="pmm_software">
             <span className="font-mono tabular-nums">{formatCount(issue.pmmSoftware)}</span>
           </Field>
         </Section>
@@ -198,11 +202,25 @@ export function IssueViewDrawer({ open, issue, onClose, onEdit }: IssueViewDrawe
         </Section>
 
         <Section title="Replacements">
-          <BoolField label="New SSD" value={issue.newSsd} />
-          <BoolField label="New Motherboard" value={issue.newMotherboard} />
-          <BoolField label="New SATA Cable" value={issue.newSataCable} />
-          <BoolField label="IMEI Changed" value={issue.imeiChanged} />
-          <BoolField label="SIM Changed" value={issue.simChanged} />
+          <TextField label="SSD Replacement" value={issue.ssd} />
+          <TextField label="Motherboard Replacement" value={issue.motherboard} />
+          <TextField label="SATA Cable" value={issue.sataCable} />
+          <TextField
+            label="IMEI Changed"
+            value={
+              issue.imeiChanged === null || issue.imeiChanged === undefined
+                ? null
+                : String(issue.imeiChanged)
+            }
+          />
+          <TextField
+            label="SIM Changed"
+            value={
+              issue.simChanged === null || issue.simChanged === undefined
+                ? null
+                : String(issue.simChanged)
+            }
+          />
           <BoolField label="Device Changed" value={issue.deviceChanged} />
         </Section>
       </div>

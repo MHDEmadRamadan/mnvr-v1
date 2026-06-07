@@ -240,7 +240,7 @@ export default function IssuesPage() {
           isColumnLocked={isLocked}
         />
 
-        <div className="flex min-h-[20rem] flex-1 flex-col border-t border-zinc-200/80 dark:border-zinc-800/80">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-zinc-200/80 dark:border-zinc-800/80">
           <IssuesDashboardTable
             items={items}
             loading={loading}
@@ -300,7 +300,7 @@ export default function IssuesPage() {
       <DeleteConfirmModal
         open={!!deleteTarget}
         title="Delete issue?"
-        description={deleteTarget ? `Permanently delete “${deleteLabel}”.` : ""}
+        description={deleteTarget ? `Permanently delete “${deleteLabel}” and related device data when no other issues remain on that device.` : ""}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleConfirmDelete}
       />
@@ -308,7 +308,7 @@ export default function IssuesPage() {
       <DeleteConfirmModal
         open={bulkDeleteOpen}
         title={`Delete ${selectedIds.length} issues?`}
-        description="This will permanently delete all selected issues. This action cannot be undone."
+        description="This will permanently delete the selected issues and remove related device/vehicle data when no other issues remain on those devices."
         onClose={() => setBulkDeleteOpen(false)}
         onConfirm={handleConfirmBulkDelete}
       />

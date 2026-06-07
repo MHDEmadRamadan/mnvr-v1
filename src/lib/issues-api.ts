@@ -14,10 +14,9 @@ import type {
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   mapIssueFromRow,
-  mapIssueToRow,
-  mapIssueUpdateToRow,
   type IssueRowWithRelations,
 } from "@/lib/issues-mapper";
+import { createMaintenanceRecord, updateMaintenanceRecord } from "@/lib/maintenance-record-api";
 import { logIssuesFetch } from "@/lib/issues-debug";
 import { runIssuePipeline } from "@/lib/issues/pipeline";
 import {
@@ -138,38 +137,25 @@ export async function fetchIssueKpis(filters: IssueQueryFilters): Promise<IssueK
 }
 
 export async function createIssue(input: IssueCreateInput): Promise<Issue> {
-  const supabase = getSupabaseClient();
-  const row = mapIssueToRow(input);
-
-  const { data, error } = await supabase
-    .from("issues")
-    .insert(row)
-    .select(ISSUES_ENRICHED_SELECT)
-    .single();
-
-  if (error) throw new Error(error.message);
-  return mapIssueFromRow(data as IssueRowWithRelations);
+  return createMaintenanceRecord(input);
 }
 
 export async function updateIssue(id: string, patch: IssueUpdateInput): Promise<Issue> {
+  return updateMaintenanceRecord({ ...patch, issueId: id });
+}
+
+export async function deleteIssues(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
   const supabase = getSupabaseClient();
-  const row = mapIssueUpdateToRow(patch);
-
-  const { data, error } = await supabase
-    .from("issues")
-    .update(row)
-    .eq("id", id)
-    .select(ISSUES_ENRICHED_SELECT)
-    .single();
-
+  const uniqueIds = [...new Set(ids)];
+  const { error } = await supabase.rpc("delete_maintenance_records", {
+    p_issue_ids: uniqueIds,
+  });
   if (error) throw new Error(error.message);
-  return mapIssueFromRow(data as IssueRowWithRelations);
 }
 
 export async function deleteIssue(id: string): Promise<void> {
-  const supabase = getSupabaseClient();
-  const { error } = await supabase.from("issues").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  await deleteIssues([id]);
 }
 
 export function subscribeToIssues(onChange: () => void): () => void {

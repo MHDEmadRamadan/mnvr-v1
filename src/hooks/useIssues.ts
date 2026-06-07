@@ -12,6 +12,7 @@ import { runIssuePipeline } from "@/lib/issues/pipeline";
 import {
   createIssue as apiCreate,
   deleteIssue as apiDelete,
+  deleteIssues as apiDeleteMany,
   fetchEnrichedIssueDataset,
   fetchIssueKpis,
   subscribeToIssues,
@@ -113,23 +114,6 @@ export function useIssues(params: IssueQueryParams) {
 
   const update = useCallback(
     async (id: string, patch: IssueUpdateInput) => {
-      setDataset((prev) =>
-        prev.map((row) =>
-          row.id === id
-            ? {
-                ...row,
-                ...patch,
-                issueType: patch.issueType ?? row.issueType,
-                motherboardIssue: patch.motherboardIssue ?? row.motherboardIssue,
-                pmmIssue: patch.pmmIssue ?? row.pmmIssue,
-                ssdIssue: patch.ssdIssue ?? row.ssdIssue,
-                otherIssue: patch.otherIssue ?? row.otherIssue,
-                description: patch.description ?? row.description,
-                issueSource: patch.issueSource ?? row.issueSource,
-              }
-            : row,
-        ),
-      );
       const saved = await apiUpdate(id, patch);
       setDataset((prev) => prev.map((row) => (row.id === id ? saved : row)));
       return saved;
@@ -160,7 +144,7 @@ export function useIssues(params: IssueQueryParams) {
       return prev.filter((row) => !idSet.has(row.id));
     });
     try {
-      await Promise.all(ids.map((id) => apiDelete(id)));
+      await apiDeleteMany(ids);
     } catch (e) {
       setDataset(snapshot);
       throw e;

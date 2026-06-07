@@ -4,6 +4,7 @@ import type { Issue } from "@/types/issue";
 const SEARCH_KEYS: (keyof Issue)[] = [
   "vehicleNumber",
   "deviceImei",
+  "deviceTickets",
   "softwareVersion",
   "flespiStatus",
   "screenStatus",
@@ -17,6 +18,9 @@ const SEARCH_KEYS: (keyof Issue)[] = [
   "motherboardType",
   "pmmType",
   "ssdType",
+  "ssd",
+  "motherboard",
+  "sataCable",
   "summarySsd",
   "description",
 ];

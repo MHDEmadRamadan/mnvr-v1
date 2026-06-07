@@ -76,7 +76,7 @@ export function stickyActionsCellClass(variant: RowVariant): string {
 }
 
 export const TABLE_SCROLL_REGION =
-  "relative isolate min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]";
+  "relative isolate min-h-0 max-h-[70vh] w-full flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]";
 
 export const TABLE_ELEMENT = "w-full min-w-max border-separate border-spacing-0 table-auto";
 

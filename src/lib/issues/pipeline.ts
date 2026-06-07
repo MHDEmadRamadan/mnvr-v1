@@ -13,6 +13,7 @@ export function clampPage(page: number, totalPages: number): number {
 const SORT_ACCESSORS: Record<string, (row: Issue) => string | number | boolean | null> = {
   vehicleNumber: (r) => r.vehicleNumber ?? "",
   deviceImei: (r) => r.deviceImei ?? "",
+  deviceTickets: (r) => r.deviceTickets ?? "",
   softwareVersion: (r) => r.softwareVersion ?? "",
   flespiStatus: (r) => r.flespiStatus ?? "",
   screenStatus: (r) => r.screenStatus ?? "",
@@ -34,12 +35,14 @@ const SORT_ACCESSORS: Record<string, (row: Issue) => string | number | boolean |
   powerOffCount: (r) => r.powerOffCount ?? -1,
   lifetime: (r) => r.lifetime ?? -1,
   summarySsd: (r) => r.summarySsd ?? "",
-  newSsd: (r) => (r.newSsd === null ? "" : r.newSsd ? 1 : 0),
-  newMotherboard: (r) => (r.newMotherboard === null ? "" : r.newMotherboard ? 1 : 0),
-  newSataCable: (r) => (r.newSataCable === null ? "" : r.newSataCable ? 1 : 0),
-  imeiChanged: (r) => (r.imeiChanged === null ? "" : r.imeiChanged ? 1 : 0),
-  simChanged: (r) => (r.simChanged === null ? "" : r.simChanged ? 1 : 0),
-  deviceChanged: (r) => (r.deviceChanged === null ? "" : r.deviceChanged ? 1 : 0),
+  ssd: (r) => r.ssd ?? "",
+  motherboard: (r) => r.motherboard ?? "",
+  sataCable: (r) => r.sataCable ?? "",
+  imeiChanged: (r) =>
+    r.imeiChanged === null || r.imeiChanged === undefined ? "" : String(r.imeiChanged),
+  simChanged: (r) =>
+    r.simChanged === null || r.simChanged === undefined ? "" : String(r.simChanged),
+  deviceChanged: (r) => (r.deviceChanged ? 1 : 0),
   description: (r) => r.description,
   createdAt: (r) => r.createdAt,
 };

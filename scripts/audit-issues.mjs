@@ -28,7 +28,7 @@ const ISSUES_SELECT = `
     device_status ( software_version, created_at ),
     hardware ( motherboard_type, created_at ),
     storage ( ssd_type, created_at ),
-    replacements ( new_ssd, created_at )
+    replacements ( ssd, motherboard, sata_cable, imei_changed, sim_changed, created_at )
   )
 `;
 

@@ -9,25 +9,35 @@ const RESOLVED_OR = "issue_type.ilike.%resolved%,issue_type.ilike.%closed%";
 export const ISSUES_ENRICHED_SELECT = `
   *,
   device:device_id (
+    id,
     imei,
+    description,
+    tickets,
     vehicle:vehicle_id (
-      vehicle_number
+      id,
+      vehicle_number,
+      description
     ),
     device_status (
+      id,
       software_version,
       flespi_status,
       screen_status,
       dotmatrix_status,
       ssh_status,
       pmm_software,
+      description,
       created_at
     ),
     hardware (
+      id,
       motherboard_type,
       pmm_type,
+      description,
       created_at
     ),
     storage (
+      id,
       ssd_type,
       disk_health,
       power_on_hours,
@@ -35,15 +45,18 @@ export const ISSUES_ENRICHED_SELECT = `
       power_off,
       lifetime,
       summary_ssd,
+      description,
       created_at
     ),
     replacements (
-      new_ssd,
-      new_motherboard,
-      new_sata_cable,
+      id,
+      ssd,
+      motherboard,
+      sata_cable,
       imei_changed,
       sim_changed,
       device_changed,
+      description,
       created_at
     )
   )
@@ -57,6 +70,7 @@ export const SORT_COLUMN_MAP: Record<string, string> = {
   _rowNum: "created_at",
   vehicleNumber: "created_at",
   deviceImei: "created_at",
+  deviceTickets: "created_at",
   softwareVersion: "created_at",
   flespiStatus: "created_at",
   screenStatus: "created_at",
@@ -77,9 +91,9 @@ export const SORT_COLUMN_MAP: Record<string, string> = {
   powerOffCount: "created_at",
   lifetime: "created_at",
   summarySsd: "created_at",
-  newSsd: "created_at",
-  newMotherboard: "created_at",
-  newSataCable: "created_at",
+  ssd: "created_at",
+  motherboard: "created_at",
+  sataCable: "created_at",
   imeiChanged: "created_at",
   simChanged: "created_at",
   deviceChanged: "created_at",

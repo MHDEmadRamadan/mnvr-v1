@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
   type ColumnDef,
   type RowSelectionState,
+  type Table,
 } from "@tanstack/react-table";
 import type { DataTableColumn, DataTableColumnGroup, SortState } from "@/components/data-table/types";
 import {
@@ -25,6 +26,27 @@ import {
 } from "@/components/data-table/table-layout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { dashboardPanel } from "@/components/issues/dashboard-ui";
+
+function SelectAllHeaderCheckbox<T>({ table }: { table: Table<T> }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const allPageSelected = table.getIsAllPageRowsSelected();
+  const somePageSelected = table.getIsSomePageRowsSelected();
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.indeterminate = somePageSelected && !allPageSelected;
+    }
+  }, [somePageSelected, allPageSelected]);
+
+  return (
+    <Checkbox
+      ref={ref}
+      checked={allPageSelected}
+      onChange={table.getToggleAllPageRowsSelectedHandler()}
+      aria-label="Select all rows on this page"
+    />
+  );
+}
 
 export type DataTableProps<T> = {
   rows: T[];
@@ -86,13 +108,7 @@ export function DataTable<T>({
     if (enableSelection) {
       defs.push({
         id: "_select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onChange={table.getToggleAllPageRowsSelectedHandler()}
-            aria-label="Select all rows on page"
-          />
-        ),
+        header: () => null,
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
@@ -146,11 +162,13 @@ export function DataTable<T>({
   }
 
   const colSpanData = visibleColumns.length + (enableSelection ? 1 : 0);
-  const shellClass = embedded ? "flex min-h-[12rem] flex-1 flex-col" : `${dashboardPanel} overflow-hidden`;
+  const shellClass = embedded
+    ? "flex min-h-0 flex-1 flex-col"
+    : `${dashboardPanel} flex flex-col overflow-hidden`;
 
   return (
     <div className={shellClass}>
-      <div className={embedded ? TABLE_SCROLL_REGION : "overflow-auto"}>
+      <div className={TABLE_SCROLL_REGION}>
         <table className={TABLE_ELEMENT}>
           <thead>
             <tr className={`${HEADER_STICKY} top-0`}>
@@ -158,7 +176,9 @@ export function DataTable<T>({
                 <th
                   rowSpan={2}
                   className={`${STICKY_SELECT_HEADER} top-0 w-11 border-b border-zinc-200/80 px-2 py-3 dark:border-zinc-800`}
-                />
+                >
+                  <SelectAllHeaderCheckbox table={table} />
+                </th>
               ) : null}
               {visibleGroups.map((group) => (
                 <th
