@@ -6,9 +6,7 @@ import type {
   Issue,
   IssueCreateInput,
   IssueKpis,
-  IssueListResult,
   IssueQueryFilters,
-  IssueQueryParams,
   IssueUpdateInput,
 } from "@/types/issue";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -17,8 +15,6 @@ import {
   type IssueRowWithRelations,
 } from "@/lib/issues-mapper";
 import { createMaintenanceRecord, updateMaintenanceRecord } from "@/lib/maintenance-record-api";
-import { logIssuesFetch } from "@/lib/issues-debug";
-import { runIssuePipeline } from "@/lib/issues/pipeline";
 import {
   applyIssueFilters,
   CRITICAL_OR,
@@ -51,51 +47,6 @@ export async function fetchEnrichedIssueDataset(
   if (error) throw new Error(error.message);
 
   return ((data ?? []) as IssueRowWithRelations[]).map(mapIssueFromRow);
-}
-
-export async function fetchIssues(
-  params: IssueQueryParams,
-): Promise<IssueListResult & { dbCounts?: IssuesDbCounts; safePage: number }> {
-  const dataset = await fetchEnrichedIssueDataset(params.filters);
-  const pipeline = runIssuePipeline(
-    dataset,
-    params.filters,
-    params.sort,
-    params.page,
-    params.pageSize,
-  );
-
-  const deviceIds = new Set(dataset.map((r) => r.deviceId));
-
-  logIssuesFetch({
-    source: "issues-enriched",
-    supabaseTotal: dataset.length,
-    afterClientFilters: pipeline.filtered.length,
-    page: pipeline.safePage,
-    pageSize: params.pageSize,
-    rowsReturned: pipeline.pageItems.length,
-    activeFilters: describeActiveFilters(params.filters),
-  });
-
-  return {
-    items: pipeline.pageItems,
-    total: pipeline.total,
-    safePage: pipeline.safePage,
-    dbCounts: {
-      issueRecords: dataset.length,
-      devices: deviceIds.size,
-    },
-  };
-}
-
-function describeActiveFilters(filters: IssueQueryFilters): Record<string, string> {
-  const active: Record<string, string> = {};
-  if (filters.issueType) active.issueType = filters.issueType;
-  if (filters.deviceImei) active.deviceImei = filters.deviceImei;
-  if (filters.issueSource) active.issueSource = filters.issueSource;
-  if (filters.createdFrom) active.createdFrom = filters.createdFrom;
-  if (filters.createdTo) active.createdTo = filters.createdTo;
-  return active;
 }
 
 export async function fetchIssueKpis(filters: IssueQueryFilters): Promise<IssueKpis> {

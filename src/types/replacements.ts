@@ -15,11 +15,6 @@ export const DEFAULT_REPLACEMENT_SSD: ReplacementSsd = "No";
 export const DEFAULT_REPLACEMENT_MOTHERBOARD: ReplacementMotherboard = "No";
 export const DEFAULT_REPLACEMENT_SATA_CABLE: ReplacementSataCable = "No";
 
-export function formatReplacementEnum(value: string | null | undefined): string {
-  if (value === null || value === undefined || String(value).trim() === "") return "—";
-  return value;
-}
-
 export function isReplacementActive(value: ReplacementSsd | ReplacementMotherboard | ReplacementSataCable | null | undefined): boolean {
   return value !== null && value !== undefined && value !== "No";
 }

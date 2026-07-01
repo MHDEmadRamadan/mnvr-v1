@@ -2,6 +2,7 @@ import type { Issue } from "@/types/issue";
 import type { DataTableColumn } from "@/components/data-table/types";
 import { formatDisplayDate, formatCount, sanitizeText } from "@/components/data-table/cells";
 import { formatReplacementDbValueForDisplay } from "@/lib/replacements-value-mapper";
+import { escapeCsv } from "@/lib/csv";
 
 function cellText(row: Issue, colId: string): string {
   switch (colId) {
@@ -70,11 +71,6 @@ function cellText(row: Issue, colId: string): string {
     default:
       return "";
   }
-}
-
-function escapeCsv(value: string): string {
-  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
 }
 
 export function exportIssuesToCsv(

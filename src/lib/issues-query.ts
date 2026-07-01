@@ -62,42 +62,6 @@ export const ISSUES_ENRICHED_SELECT = `
   )
 `;
 
-export const SORT_COLUMN_MAP: Record<string, string> = {
-  ssdIssue: "ssd_issue",
-  _rowNum: "created_at",
-  vehicleNumber: "created_at",
-  deviceImei: "created_at",
-  deviceTickets: "created_at",
-  softwareVersion: "created_at",
-  flespiStatus: "created_at",
-  screenStatus: "created_at",
-  dotMatrixStatus: "created_at",
-  sshStatus: "created_at",
-  pmmSoftware: "created_at",
-  issueType: "issue_type",
-  motherboardIssue: "motherboard_issue",
-  pmmIssue: "pmm_issue",
-  otherIssue: "other_issue",
-  issueSource: "issue_source",
-  motherboardType: "created_at",
-  pmmType: "created_at",
-  ssdType: "created_at",
-  diskHealth: "created_at",
-  powerOnHours: "created_at",
-  powerCycles: "created_at",
-  powerOffCount: "created_at",
-  lifetime: "created_at",
-  summarySsd: "created_at",
-  ssd: "created_at",
-  motherboard: "created_at",
-  sataCable: "created_at",
-  imeiChanged: "created_at",
-  simChanged: "created_at",
-  deviceChanged: "created_at",
-  description: "description",
-  createdAt: "created_at",
-};
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function applyIssueFilters<T extends Record<string, any>>(query: T, filters: IssueQueryFilters): T {
   let q = query;
