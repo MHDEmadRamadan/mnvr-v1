@@ -46,3 +46,46 @@ edit modals).
   database was accessed **read-only** for schema/enum inspection only.
 - Proposed production DB changes (drop redundant `issues.vehicle_id`) were **not executed** —
   see `SQL_MIGRATIONS.sql` (Section B, commented) and `DATABASE_CHANGES.md`.
+
+---
+
+## 5. Phases 2–6 (redesign + cleanup + integration)
+
+### Phase 2 — Database redesign
+Normalized target documented in `DATABASE_REDESIGN.md`. Local mirror + `supabase/schema/issues.sql`
+already match the target (`SSD` enum `NEW/USED/No`; no redundant `issues.vehicle_id`). Production
+migration proposed only (`SQL_MIGRATIONS.sql`).
+
+### Phase 3 — Backend cleanup
+Removed dead modules (`device-api.ts`, `form-suggestions/index.ts`, `issues-debug.ts`) and dead
+exports (`fetchIssues`, `fetchEnrichedIssuesForDevice`, `SORT_COLUMN_MAP`, `downloadReportCsv`,
+`REPORTS_RELATIONSHIP_NOTES`, `formatReplacementEnum`, `isPersistedIssue`, dashboard danger/ghost
+tokens, unused `replacements-value-mapper` helpers). De-duplicated `escapeCsv` into `src/lib/csv.ts`.
+
+### Phase 4 — Frontend cleanup
+Fixed the 2 `react-hooks/set-state-in-effect` lint errors: `ComboboxField` now syncs the prop into
+state during render (no effect); `useFieldSuggestions` annotates its intentional fetch-on-enable.
+Removed dead `IssueListResult` and a redundant `IssuesFilterState` re-export. `npm run lint` now
+exits 0 (remaining 3 warnings: 1 unfixable TanStack `useReactTable` library warning + 2 intentional
+`visibilityKey` cache-busting deps).
+
+### Phase 5 — Integration testing (found + fixed a real bug)
+- 🐛 **Fixed pre-existing bug:** `/api/reports/export` returned **500** because
+  `buildReportExportBuffer` (server) called `sanitizeText`/`formatDisplayDate` from the
+  `"use client"` `cells.tsx`. Extracted pure formatters into server-safe `src/lib/format.ts`
+  (re-exported by `cells.tsx`). CSV + XLSX export now return **200**.
+- API routes verified against local mirror: `/api/form-suggestions` ✅, `/api/reports/query` ✅,
+  `/api/reports/metrics` ✅, `/api/reports/export?format=csv|xlsx` ✅.
+- UI walkthrough (recorded): Issues list + create ✅, Reports charts/metrics/table ✅, Export CSV ✅,
+  Settings + theme toggle ✅.
+
+### Phase 6 — Final verification
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Types | `npx tsc --noEmit` | ✅ pass |
+| Lint | `npm run lint` | ✅ exit 0 (0 errors; 3 inherent warnings) |
+| Unit tests | `npm test` | ✅ 39 pass / 0 fail |
+| Build | `npm run build` | ✅ compiled successfully |
+| CRUD (local) | UI + REST | ✅ create/read/update/delete |
+| Reports + export | UI + API | ✅ |
