@@ -39,8 +39,8 @@ scripts) that reads `issues.vehicle_id` would break. **Do not run without review
 3. (Optional, reversible first step) keep the column but stop relying on it — already true in code.
 4. Only then run the guarded `DROP COLUMN` in `SQL_MIGRATIONS.sql` (Section B).
 
-**Pre-drop validation query (read-only)** — confirm the column is derivable/redundant, i.e. it
-never disagrees with the device→vehicle link:
+**Pre-drop validation query (read-only)** — compare the redundant column with the authoritative
+device→vehicle link:
 
 ```sql
 select count(*) as mismatches
@@ -50,7 +50,19 @@ where i.vehicle_id is not null
   and i.vehicle_id <> d.vehicle_id;
 ```
 
-Expect `0`. If `0`, dropping the column loses no information.
+**Update (architectural verification):** production currently returns **`2`** mismatches
+(issues `978a09c2-6561-4dcf-9e1c-0b0bb5887351` and `7ef0307b-d9c9-4c11-92ad-474698c7eaa4`) — i.e. the
+redundant column has already drifted. Since the app resolves the vehicle only via
+`issues.device_id → device.vehicle_id`, `device.vehicle_id` is authoritative and dropping
+`issues.vehicle_id` removes only the stale duplicate (no correct data lost). The mismatches are
+evidence **for** removal, not a blocker.
+
+## Change 3 — Security: restrict anon writes (REVIEW — needs product decision)
+
+The public anon key currently permits full read/write/delete via open RLS + RPC `EXECUTE` grants.
+A proposed lock-down (drop anon write policies, revoke RPC execute) is in `SQL_MIGRATIONS.sql` §C.
+**Do not apply** until writes move server-side (service_role) or authentication is added, or the app
+will break. See `ARCHITECTURE_VERIFICATION.md` finding V-2.
 
 ## Not changed (recommended follow-ups)
 

@@ -108,3 +108,23 @@ Details in `TEST_REPORT.md`.
 - `supabase/schema/issues.sql` — `"SSD"` enum → `('NEW','USED','No')`.
 
 **Proposed production DB changes (NOT executed):** see `DATABASE_CHANGES.md` and `SQL_MIGRATIONS.sql`.
+
+---
+
+## 4. Follow-up architectural verification (full structural pass)
+
+A complete read-only structural verification of production vs. the app was performed — see
+`ARCHITECTURE_VERIFICATION.md`. No new functional/correctness bugs were found beyond those fixed in
+Phases 1–6. New findings:
+
+| ID | Severity | Finding |
+|----|----------|---------|
+| V-1 | Medium | `issues.vehicle_id` (redundant FK) has **drifted** — 2/99 rows disagree with `device.vehicle_id`. Resolved by the already-proposed column drop (`SQL_MIGRATIONS.sql` §B). App unaffected (reads via `device.vehicle_id`). |
+| V-2 | High | Public anon key has full read/write/delete on all data (no auth; open RLS). Mitigation proposed in `SQL_MIGRATIONS.sql` §C (needs product decision; not executed). |
+| V-3 | Low→Medium | Client-side fetch of up to 10k enriched rows + client filter/sort/paginate; non-sargable KPI `ilike` queries. Recommendation only. |
+| V-4 | Low | Full enumeration of prod functions/triggers/views not possible with anon-only; recommend a `service_role` `supabase db pull` to lock a baseline. |
+| V-5 | Low | Residual Reports/Issues duplication (select builders, filter appliers, `computeTotalPages`, row→string mappers) documented for a future, separately-tested refactor. |
+
+Verified consistent: all app-used FK relations resolve against production; enums aligned
+(`NEW/USED/No`); only column-level schema drift is `issues.vehicle_id`; `delete_maintenance_record`
+RPC confirmed present (safe no-op probe); CRUD + Reports + Settings flows pass on the local mirror.
