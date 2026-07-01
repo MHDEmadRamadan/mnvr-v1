@@ -190,7 +190,7 @@ async function fetchEnrichedIssue(supabase: SupabaseClient, issueId: string): Pr
     .single();
 
   if (error) throw new Error(error.message);
-  return mapIssueFromRow(data as IssueRowWithRelations);
+  return mapIssueFromRow(data as unknown as IssueRowWithRelations);
 }
 
 /** Task 1 — create_maintenance_record E2E */

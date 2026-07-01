@@ -5,9 +5,28 @@ const CRITICAL_OR =
 
 const RESOLVED_OR = "issue_type.ilike.%resolved%,issue_type.ilike.%closed%";
 
+/**
+ * Explicit `issues` base columns (the normalized set — NO `issues.vehicle_id`).
+ * Selecting these explicitly (instead of `*`) decouples the app from the redundant
+ * `issues.vehicle_id` column so it is unaffected by that column's removal. The vehicle is
+ * always resolved via `issues.device_id → device.vehicle_id → vehicles` (see the embed below).
+ */
+export const ISSUES_BASE_FIELDS = `
+  id,
+  device_id,
+  issue_type,
+  motherboard_issue,
+  pmm_issue,
+  ssd_issue,
+  other_issue,
+  description,
+  issue_source,
+  created_at
+`;
+
 /** Full enriched select for issues list + CRUD return payloads. */
 export const ISSUES_ENRICHED_SELECT = `
-  *,
+  ${ISSUES_BASE_FIELDS},
   device:device_id (
     id,
     imei,

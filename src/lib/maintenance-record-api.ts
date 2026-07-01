@@ -21,7 +21,7 @@ async function fetchEnrichedIssueById(issueId: string): Promise<Issue> {
     .single();
 
   if (error) throw new Error(error.message);
-  return mapIssueFromRow(data as IssueRowWithRelations);
+  return mapIssueFromRow(data as unknown as IssueRowWithRelations);
 }
 
 export async function createMaintenanceRecord(input: IssueCreateInput): Promise<Issue> {

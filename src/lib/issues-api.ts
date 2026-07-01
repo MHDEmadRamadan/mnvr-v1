@@ -46,7 +46,7 @@ export async function fetchEnrichedIssueDataset(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as IssueRowWithRelations[]).map(mapIssueFromRow);
+  return ((data ?? []) as unknown as IssueRowWithRelations[]).map(mapIssueFromRow);
 }
 
 export async function fetchIssueKpis(filters: IssueQueryFilters): Promise<IssueKpis> {
