@@ -59,6 +59,12 @@ end $$;
 -- -----------------------------------------------------------------------------
 -- SECTION B — Normalize: drop redundant issues.vehicle_id  (DESTRUCTIVE)
 -- -----------------------------------------------------------------------------
+-- ►► The full, staged, blue-green version of this change (pre-check + data fix +
+--    issues_safe compat view + drop + rollback) now lives in:
+--      supabase/schema/migrations/20260701_drop_issues_vehicle_id.sql
+--    It was tested end-to-end on a local mirror (see VEHICLE_ID_REMOVAL.md).
+--    The condensed form below is kept for reference.
+--
 -- Redundant with issues.device_id -> device.vehicle_id, unused by the app, and
 -- drifting (app-created rows are NULL). REVIEW + BACKUP before enabling.
 --

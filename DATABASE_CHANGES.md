@@ -33,6 +33,11 @@ duplicated foreign key and a partial/again-derivable column).
 **Risk:** destructive and irreversible without a backup. Any external consumer (BI, exports,
 scripts) that reads `issues.vehicle_id` would break. **Do not run without review + backup.**
 
+**Staged migration (generated + tested on local mirror):**
+`supabase/schema/migrations/20260701_drop_issues_vehicle_id.sql` implements the full blue-green
+flow (pre-check → data fix → `issues_safe` compat view → drop → rollback). See `VEHICLE_ID_REMOVAL.md`
+for the dependency/risk map and validation results. Nothing was executed on production.
+
 **Safer rollout (recommended order):**
 1. Backup / snapshot the database.
 2. Confirm no external consumer references `issues.vehicle_id`.
