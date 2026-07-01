@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import type { Issue } from "@/types/issue";
 import type { ReportExportFormat } from "@/types/reports";
-import { formatDisplayDate, sanitizeText } from "@/components/data-table/cells";
+import { formatDisplayDate, sanitizeText } from "@/lib/format";
 import { REPORT_EXPORT_COLUMNS } from "@/config/reports-table-config";
 import { formatReplacementDbValueForDisplay } from "@/lib/replacements-value-mapper";
 import { escapeCsv } from "@/lib/csv";

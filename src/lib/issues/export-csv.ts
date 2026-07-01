@@ -1,6 +1,6 @@
 import type { Issue } from "@/types/issue";
 import type { DataTableColumn } from "@/components/data-table/types";
-import { formatDisplayDate, formatCount, sanitizeText } from "@/components/data-table/cells";
+import { formatDisplayDate, formatCount, sanitizeText } from "@/lib/format";
 import { formatReplacementDbValueForDisplay } from "@/lib/replacements-value-mapper";
 import { escapeCsv } from "@/lib/csv";
 
