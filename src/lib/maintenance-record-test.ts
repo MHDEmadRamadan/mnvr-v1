@@ -160,7 +160,7 @@ function buildFullTestForm() {
     lifetime: 1000,
     summarySsd: "SMART OK",
     storageDescription: "Storage OK",
-    ssd: "NEW SSD" as const,
+    ssd: "NEW" as const,
     motherboard: "USED" as const,
     sataCable: "NEW" as const,
     imeiChanged: "352625123456789",
