@@ -62,9 +62,6 @@ export const ISSUES_ENRICHED_SELECT = `
   )
 `;
 
-/** @deprecated Use ISSUES_ENRICHED_SELECT */
-export const ISSUES_SELECT = ISSUES_ENRICHED_SELECT;
-
 export const SORT_COLUMN_MAP: Record<string, string> = {
   ssdIssue: "ssd_issue",
   _rowNum: "created_at",

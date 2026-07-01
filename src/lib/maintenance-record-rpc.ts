@@ -384,22 +384,12 @@ export async function safeMaintenanceRpcCall(
   return parseMaintenanceRpcResult(data, operation);
 }
 
-/** @deprecated Use deepSanitizeMaintenanceRpcPayload via safeMaintenanceRpcCall */
-export function sanitizeMaintenanceRpcPayload(
-  payload: Record<string, unknown>,
-  operation: "create" | "update",
-): MaintenanceRpcPayload {
-  const op: MaintenanceRpcOperation =
-    operation === "create" ? "create_maintenance_record" : "update_maintenance_record";
-  return deepSanitizeMaintenanceRpcPayload(payload, op);
-}
-
-/** @deprecated Use coerceUuidValue via deepSanitizeMaintenanceRpcPayload */
+/** Extract a required UUID string (used by issue/relation mappers). */
 export function extractUuidString(value: unknown, fieldName: string): string {
   return coerceUuidValue(value, fieldName, false);
 }
 
-/** @deprecated Use coerceUuidValue via deepSanitizeMaintenanceRpcPayload */
+/** Extract an optional UUID string, returning "" when absent (used by relation mappers). */
 export function extractOptionalUuidString(value: unknown, fieldName: string): string {
   return coerceUuidValue(value, fieldName, true);
 }
