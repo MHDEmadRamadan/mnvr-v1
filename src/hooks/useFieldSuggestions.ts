@@ -31,6 +31,7 @@ export function useFieldSuggestions(enabled = true) {
 
   useEffect(() => {
     if (!enabled) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional fetch-on-enable; load() sets loading/suggestions after the async call
     void load(false);
   }, [enabled, load]);
 

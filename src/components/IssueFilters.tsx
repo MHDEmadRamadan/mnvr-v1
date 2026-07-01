@@ -4,8 +4,6 @@ import type { IssuesFilterState } from "@/lib/issue-filters";
 import { ColumnSelector, type ColumnOption } from "@/components/issues/ColumnSelector";
 import { dashboardInput, dashboardSelect } from "@/components/issues/dashboard-ui";
 
-export type { IssuesFilterState };
-
 type IssueFiltersProps = {
   value: IssuesFilterState;
   onChange: (next: IssuesFilterState) => void;
