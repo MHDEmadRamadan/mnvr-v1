@@ -51,13 +51,13 @@ describe("maintenance form field alignment", () => {
   it("no legacy replacement boolean keys in RPC payload", () => {
     const payload = maintenanceFormToRpcPayload({
       ...emptyMaintenanceRecordForm(),
-      ssd: "NEW SSD",
+      ssd: "NEW",
       motherboard: "NEW",
       sataCable: "USED",
       imeiChanged: "352625123456789",
       simChanged: "8944501234567890123",
     });
-    assert.equal(payload.ssd, "NEW SSD");
+    assert.equal(payload.ssd, "NEW");
     assert.equal(payload.motherboard, "NEW");
     assert.equal(payload.sata_cable, "USED");
     assert.equal(payload.imei_changed, "352625123456789");

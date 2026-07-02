@@ -74,7 +74,7 @@ create index if not exists storage_device_id_idx on public.storage (device_id);
 -- replacements (ENUM columns — aligned with frontend form)
 do $$
 begin
-  create type public."SSD" as enum ('NEW SSD', 'USED SSD', 'No');
+  create type public."SSD" as enum ('NEW', 'USED', 'No');
 exception when duplicate_object then null;
 end $$;
 
