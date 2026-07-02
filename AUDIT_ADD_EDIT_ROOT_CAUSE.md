@@ -81,33 +81,29 @@ missing object lives inside DB functions). Therefore **no code change is require
 
 | Object | Type | Status | Action |
 |--------|------|--------|--------|
-| `public.device_vehicle_history` | table | **MISSING** (referenced by `record_device_vehicle_assignment`) | **create it** (migration below) |
+| `public.device_vehicle_history` | table | **MISSING**, referenced by `record_device_vehicle_assignment` | **Do NOT create** — remove the dependency (orphaned/unconsumed feature) |
+| `public.record_device_vehicle_assignment` | function | present but orphaned (no consumer, broken) | **drop it** + strip its calls from the two RPCs |
 | everything else app-facing | tables/views/functions | present | none |
 
 No trigger references it (repo/prod define no triggers); the dependency is via the function.
 
 ---
 
-## 5. Fix — migration (generated, tested; NOT applied to production)
+## 5. Fix — REMOVE the orphaned dependency (no new tables)
 
-`supabase/migrations/20260702160000_create_device_vehicle_history.sql` creates the table. The column
-set is derived from the function's usage (`device_id`, `vehicle_id`, open-assignment via
-`unassigned_at IS NULL`):
+> **Decision update:** rather than creating `device_vehicle_history`, the dependency is removed,
+> because `record_device_vehicle_assignment` is an orphaned/incomplete feature — its table never
+> existed and no application code consumes it. See `RECORD_DEVICE_VEHICLE_ASSIGNMENT_ANALYSIS.md`.
+> The earlier `20260702160000_create_device_vehicle_history.sql` migration has been **withdrawn**.
 
-```sql
-create table if not exists public.device_vehicle_history (
-  id            uuid primary key default gen_random_uuid(),
-  device_id     uuid not null references public.device(id)    on delete cascade,
-  vehicle_id    uuid not null references public.vehicles(id)  on delete cascade,
-  assigned_at   timestamptz not null default now(),
-  unassigned_at timestamptz
-);
--- + indexes (device_id; partial where unassigned_at is null), RLS, anon/authenticated/service_role grants
-```
+`supabase/migrations/20260702170000_remove_device_vehicle_history_dependency.sql`:
+- `CREATE OR REPLACE` `create_maintenance_record` / `update_maintenance_record` identical to
+  production **minus** the four `perform record_device_vehicle_assignment(...)` calls.
+- `DROP FUNCTION public.record_device_vehicle_assignment(uuid, uuid)`.
+- Creates **no** new tables.
 
-To apply to production (reviewed operator action): `supabase db push` (or run the migration in the
-SQL editor), then `notify pgrst, 'reload schema';`. It is idempotent (`create table if not exists`,
-`create index if not exists`).
+To apply to production (reviewed operator action): `supabase db push` (or run the migration), then
+`notify pgrst, 'reload schema';`.
 
 ---
 
@@ -129,7 +125,10 @@ SQL editor), then `notify pgrst, 'reload schema';`. It is idempotent (`create ta
 
 - **Why ADD/EDIT fail:** production functions call `record_device_vehicle_assignment`, which uses the
   non-existent table `public.device_vehicle_history` → `42P01` on every create/update.
-- **DB or code wrong:** **DB** (missing table). **No application code is wrong** for this failure.
-- **Fix:** apply `supabase/migrations/20260702160000_create_device_vehicle_history.sql` to production.
+- **DB or code wrong:** **DB** (a function references a table that never existed). **No application
+  code is wrong** for this failure.
+- **Fix (chosen):** apply `supabase/migrations/20260702170000_remove_device_vehicle_history_dependency.sql`
+  — strip the orphaned `record_device_vehicle_assignment` calls from the two RPCs and drop the
+  function. **No new tables.** (See `RECORD_DEVICE_VEHICLE_ASSIGNMENT_ANALYSIS.md`.)
 - **Not caused by the earlier `issues.vehicle_id` work:** that drop was never applied to production
   (column still present), and it is unrelated to `device_vehicle_history`.
