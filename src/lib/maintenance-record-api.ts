@@ -21,7 +21,7 @@ async function fetchEnrichedIssueById(issueId: string): Promise<Issue> {
     .single();
 
   if (error) throw new Error(error.message);
-  return mapIssueFromRow(data as IssueRowWithRelations);
+  return mapIssueFromRow(data as unknown as IssueRowWithRelations);
 }
 
 export async function createMaintenanceRecord(input: IssueCreateInput): Promise<Issue> {
@@ -42,17 +42,4 @@ export async function updateMaintenanceRecord(input: IssueUpdateInput): Promise<
   const updated = pickPrimaryIssueFromRpcResult(rpcResult, input.issueId);
 
   return fetchEnrichedIssueById(updated.id);
-}
-
-/** Fetch all enriched issues for a device after maintenance RPC (diagnostics / future UI). */
-export async function fetchEnrichedIssuesForDevice(deviceId: string): Promise<Issue[]> {
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("issues")
-    .select(ISSUES_ENRICHED_SELECT)
-    .eq("device_id", deviceId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as IssueRowWithRelations[]).map(mapIssueFromRow);
 }

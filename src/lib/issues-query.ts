@@ -5,9 +5,28 @@ const CRITICAL_OR =
 
 const RESOLVED_OR = "issue_type.ilike.%resolved%,issue_type.ilike.%closed%";
 
+/**
+ * Explicit `issues` base columns (the normalized set — NO `issues.vehicle_id`).
+ * Selecting these explicitly (instead of `*`) decouples the app from the redundant
+ * `issues.vehicle_id` column so it is unaffected by that column's removal. The vehicle is
+ * always resolved via `issues.device_id → device.vehicle_id → vehicles` (see the embed below).
+ */
+export const ISSUES_BASE_FIELDS = `
+  id,
+  device_id,
+  issue_type,
+  motherboard_issue,
+  pmm_issue,
+  ssd_issue,
+  other_issue,
+  description,
+  issue_source,
+  created_at
+`;
+
 /** Full enriched select for issues list + CRUD return payloads. */
 export const ISSUES_ENRICHED_SELECT = `
-  *,
+  ${ISSUES_BASE_FIELDS},
   device:device_id (
     id,
     imei,
@@ -61,45 +80,6 @@ export const ISSUES_ENRICHED_SELECT = `
     )
   )
 `;
-
-/** @deprecated Use ISSUES_ENRICHED_SELECT */
-export const ISSUES_SELECT = ISSUES_ENRICHED_SELECT;
-
-export const SORT_COLUMN_MAP: Record<string, string> = {
-  ssdIssue: "ssd_issue",
-  _rowNum: "created_at",
-  vehicleNumber: "created_at",
-  deviceImei: "created_at",
-  deviceTickets: "created_at",
-  softwareVersion: "created_at",
-  flespiStatus: "created_at",
-  screenStatus: "created_at",
-  dotMatrixStatus: "created_at",
-  sshStatus: "created_at",
-  pmmSoftware: "created_at",
-  issueType: "issue_type",
-  motherboardIssue: "motherboard_issue",
-  pmmIssue: "pmm_issue",
-  otherIssue: "other_issue",
-  issueSource: "issue_source",
-  motherboardType: "created_at",
-  pmmType: "created_at",
-  ssdType: "created_at",
-  diskHealth: "created_at",
-  powerOnHours: "created_at",
-  powerCycles: "created_at",
-  powerOffCount: "created_at",
-  lifetime: "created_at",
-  summarySsd: "created_at",
-  ssd: "created_at",
-  motherboard: "created_at",
-  sataCable: "created_at",
-  imeiChanged: "created_at",
-  simChanged: "created_at",
-  deviceChanged: "created_at",
-  description: "description",
-  createdAt: "created_at",
-};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function applyIssueFilters<T extends Record<string, any>>(query: T, filters: IssueQueryFilters): T {

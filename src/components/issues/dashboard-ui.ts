@@ -13,9 +13,3 @@ export const dashboardBtnSecondary =
 
 export const dashboardBtnPrimary =
   "inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200";
-
-export const dashboardBtnDanger =
-  "rounded-lg border border-red-200/80 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-800 transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/80";
-
-export const dashboardBtnGhost =
-  "rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-semibold text-zinc-800 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-800";

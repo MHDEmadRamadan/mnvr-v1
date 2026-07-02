@@ -1,5 +1,6 @@
 import type { ReportFilters } from "@/types/reports";
 import { needsDeviceInnerJoin } from "@/lib/reports/reports-filters";
+import { ISSUES_BASE_FIELDS } from "@/lib/issues-query";
 
 const DEVICE_STATUS_FIELDS = `
   id,
@@ -92,7 +93,7 @@ export function buildReportsSelect(filters: ReportFilters): string {
   const replacementsJoin = replacementFilterActive(filters) ? "replacements!inner" : "replacements";
 
   return `
-    *,
+    ${ISSUES_BASE_FIELDS},
     ${deviceJoin} (
       id,
       imei,

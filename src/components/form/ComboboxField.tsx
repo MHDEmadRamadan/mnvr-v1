@@ -37,9 +37,12 @@ export function ComboboxField({
   const [query, setQuery] = useState(value);
   const [highlight, setHighlight] = useState(0);
 
-  useEffect(() => {
+  // Sync the external value into local query state during render (no effect needed).
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     setQuery(value);
-  }, [value]);
+  }
 
   const filtered = filterComboboxOptions(options, query);
   const exactMatch = options.some((o) => o.toLowerCase() === query.trim().toLowerCase());

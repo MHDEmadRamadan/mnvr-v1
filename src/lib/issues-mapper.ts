@@ -78,40 +78,12 @@ type ReplacementsRow = {
   ssd: ReplacementSsd | null;
   motherboard: ReplacementMotherboard | null;
   sata_cable: ReplacementSataCable | null;
-  /** @deprecated Legacy boolean columns — read fallback only */
-  new_ssd?: boolean | null;
-  new_motherboard?: boolean | null;
-  new_sata_cable?: boolean | null;
   imei_changed: boolean | string | number | null;
   sim_changed: boolean | string | number | null;
   device_changed: boolean | string | null;
   description: string | null;
   created_at: string;
 };
-
-function mapReplacementSsd(row: ReplacementsRow | null): ReplacementSsd | null {
-  if (!row) return null;
-  if (row.ssd) return row.ssd;
-  if (row.new_ssd === true) return "NEW SSD";
-  if (row.new_ssd === false) return "No";
-  return null;
-}
-
-function mapReplacementMotherboard(row: ReplacementsRow | null): ReplacementMotherboard | null {
-  if (!row) return null;
-  if (row.motherboard) return row.motherboard;
-  if (row.new_motherboard === true) return "NEW";
-  if (row.new_motherboard === false) return "No";
-  return null;
-}
-
-function mapReplacementSataCable(row: ReplacementsRow | null): ReplacementSataCable | null {
-  if (!row) return null;
-  if (row.sata_cable) return row.sata_cable;
-  if (row.new_sata_cable === true) return "NEW";
-  if (row.new_sata_cable === false) return "No";
-  return null;
-}
 
 type DeviceJoin = {
   id: string;
@@ -211,9 +183,9 @@ export function mapIssueFromRow(row: IssueRowWithRelations): Issue {
     summarySsd: nullableStr(storage?.summary_ssd ?? null),
     storageDescription: nullableStr(storage?.description ?? null),
     replacementsId: joinRowId(replacements?.id),
-    ssd: mapReplacementSsd(replacements),
-    motherboard: mapReplacementMotherboard(replacements),
-    sataCable: mapReplacementSataCable(replacements),
+    ssd: replacements?.ssd ?? null,
+    motherboard: replacements?.motherboard ?? null,
+    sataCable: replacements?.sata_cable ?? null,
     imeiChanged: replacements?.imei_changed ?? null,
     simChanged: replacements?.sim_changed ?? null,
     deviceChanged: coerceDbBoolean(replacements?.device_changed),
@@ -342,12 +314,3 @@ export function maintenanceUpdateToRpcPayload(input: MaintenanceRecordUpdateInpu
   };
 }
 
-/** @deprecated Use maintenance record RPC mappers */
-export function mapIssueToRow(): Partial<IssueRow> {
-  return {};
-}
-
-/** @deprecated Use maintenance record RPC mappers */
-export function mapIssueUpdateToRow(): Partial<IssueRow> {
-  return {};
-}

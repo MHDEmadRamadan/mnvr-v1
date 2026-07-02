@@ -5,11 +5,7 @@
  * UI form: null (no change) | string (new value)
  */
 
-export type ReplacementValue = string | false | null;
-
 export type ReplacementChangeField = "imei_changed" | "sim_changed";
-
-export const REPLACEMENT_VALUE_FIELDS = ["imei_changed", "sim_changed"] as const;
 
 const DEV = process.env.NODE_ENV !== "production";
 
@@ -38,10 +34,6 @@ function isLegacyFlagString(value: string): boolean {
   return normalized === "yes" || normalized === "true";
 }
 
-export function isReplacementValueField(key: string): boolean {
-  return (REPLACEMENT_VALUE_FIELDS as readonly string[]).includes(key);
-}
-
 /** UI display helper */
 export function isReplacementNoChange(value: unknown): boolean {
   if (value === null || value === undefined) return true;
@@ -49,14 +41,6 @@ export function isReplacementNoChange(value: unknown): boolean {
   if (typeof value === "boolean") return value === false;
   if (typeof value === "string") return isNoChangeLiteral(value) || isLegacyFlagString(value);
   return true;
-}
-
-/**
- * PostgreSQL legacy boolean columns (read path).
- * false → no change; true → changed flag without stored IMEI/SIM (data not recoverable).
- */
-function legacyDbBooleanToUi(_value: boolean): string | null {
-  return null;
 }
 
 /** DB → UI (form / Issue): legacy boolean / false / null / "false" → null; string → trimmed */
@@ -67,9 +51,8 @@ export function dbReplacementValueToUi(
   if (value === null || value === undefined) return null;
   if (value === false) return null;
 
-  if (typeof value === "boolean") {
-    return legacyDbBooleanToUi(value);
-  }
+  // Legacy boolean columns are not recoverable to a stored IMEI/SIM value → treat as no change.
+  if (typeof value === "boolean") return null;
 
   if (typeof value === "string") {
     const trimmed = value.trim();

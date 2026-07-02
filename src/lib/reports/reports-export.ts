@@ -1,9 +1,10 @@
 import * as XLSX from "xlsx";
 import type { Issue } from "@/types/issue";
 import type { ReportExportFormat } from "@/types/reports";
-import { formatDisplayDate, sanitizeText } from "@/components/data-table/cells";
+import { formatDisplayDate, sanitizeText } from "@/lib/format";
 import { REPORT_EXPORT_COLUMNS } from "@/config/reports-table-config";
 import { formatReplacementDbValueForDisplay } from "@/lib/replacements-value-mapper";
+import { escapeCsv } from "@/lib/csv";
 
 function boolText(value: boolean | null | undefined): string {
   if (value === null || value === undefined) return "";
@@ -39,11 +40,6 @@ function rowToRecord(row: Issue): Record<string, string | number> {
     Description: sanitizeText(row.description),
     Created: formatDisplayDate(row.createdAt),
   };
-}
-
-function escapeCsv(value: string): string {
-  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
-  return value;
 }
 
 function buildCsv(rows: Issue[]): Buffer {
@@ -84,16 +80,4 @@ export function buildReportExportBuffer(
     filename: `issues-report-${stamp}.csv`,
     contentType: "text/csv; charset=utf-8",
   };
-}
-
-/** Client-side CSV download from already-fetched page rows (fallback). */
-export function downloadReportCsv(rows: Issue[], filename = "issues-report.csv"): void {
-  const { buffer } = buildReportExportBuffer(rows, "csv");
-  const blob = new Blob([new Uint8Array(buffer)], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }

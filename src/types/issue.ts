@@ -105,8 +105,3 @@ export type IssueKpis = {
   resolved: number;
   critical: number;
 };
-
-export type IssueListResult = {
-  items: Issue[];
-  total: number;
-};
