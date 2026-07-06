@@ -10,7 +10,7 @@ begin;
 -- ---------------------------------------------------------------------------
 do $$
 begin
-  create type public."SSD" as enum ('NEW SSD', 'USED SSD', 'No');
+  create type public."SSD" as enum ('NEW', 'USED', 'No');
 exception when duplicate_object then null;
 end $$;
 
@@ -40,7 +40,7 @@ begin
     alter table public.replacements add column if not exists sata_cable public.sata_cable not null default 'No';
 
     update public.replacements set
-      ssd = case when new_ssd then 'NEW SSD'::public."SSD" else 'No'::public."SSD" end,
+      ssd = case when new_ssd then 'NEW'::public."SSD" else 'No'::public."SSD" end,
       motherboard = case when new_motherboard then 'NEW'::public."MOTHERBOARD" else 'No'::public."MOTHERBOARD" end,
       sata_cable = case when new_sata_cable then 'NEW'::public.sata_cable else 'No'::public.sata_cable end;
 

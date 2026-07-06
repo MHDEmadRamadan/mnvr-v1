@@ -92,7 +92,7 @@ type ReplacementsRow = {
 function mapReplacementSsd(row: ReplacementsRow | null): ReplacementSsd | null {
   if (!row) return null;
   if (row.ssd) return row.ssd;
-  if (row.new_ssd === true) return "NEW SSD";
+  if (row.new_ssd === true) return "NEW";
   if (row.new_ssd === false) return "No";
   return null;
 }
