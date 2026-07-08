@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import type { Issue, IssueCreateInput, IssueUpdateInput } from "@/types/issue";
 import { useIssues } from "@/hooks/useIssues";
+import { useAuth } from "@/contexts/AuthContext";
 import { useIssueColumns } from "@/hooks/useIssueColumns";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { defaultFilterState, toIssueQueryFilters, type IssuesFilterState } from "@/lib/issue-filters";
@@ -27,6 +28,7 @@ import { Toasts, type Toast } from "@/components/Toasts";
 type ModalMode = "closed" | "create" | "edit";
 
 export default function IssuesPage() {
+  const { isAdmin } = useAuth();
   const [filters, setFilters] = useState<IssuesFilterState>(defaultFilterState);
   const debouncedFilters = useDebouncedValue(filters, 300);
 
@@ -226,6 +228,7 @@ export default function IssuesPage() {
           onBulkDelete={() => setBulkDeleteOpen(true)}
           hasActiveFilters={hasActiveIssueFilters(filters)}
           exportDisabled={loading || sortedRows.length === 0}
+          canDelete={isAdmin}
         />
 
         <IssueFilters
@@ -256,6 +259,7 @@ export default function IssuesPage() {
             onEdit={openEdit}
             onDelete={setDeleteTarget}
             onCopy={handleCopyRow}
+            canDelete={isAdmin}
           />
 
           <IssuePagination
@@ -297,21 +301,25 @@ export default function IssuesPage() {
         onSave={handleSave}
       />
 
-      <DeleteConfirmModal
-        open={!!deleteTarget}
-        title="Delete issue?"
-        description={deleteTarget ? `Permanently delete “${deleteLabel}” and related device data when no other issues remain on that device.` : ""}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleConfirmDelete}
-      />
+      {isAdmin ? (
+        <DeleteConfirmModal
+          open={!!deleteTarget}
+          title="Delete issue?"
+          description={deleteTarget ? `Permanently delete “${deleteLabel}” and related device data when no other issues remain on that device.` : ""}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={handleConfirmDelete}
+        />
+      ) : null}
 
-      <DeleteConfirmModal
-        open={bulkDeleteOpen}
-        title={`Delete ${selectedIds.length} issues?`}
-        description="This will permanently delete the selected issues and remove related device/vehicle data when no other issues remain on those devices."
-        onClose={() => setBulkDeleteOpen(false)}
-        onConfirm={handleConfirmBulkDelete}
-      />
+      {isAdmin ? (
+        <DeleteConfirmModal
+          open={bulkDeleteOpen}
+          title={`Delete ${selectedIds.length} issues?`}
+          description="This will permanently delete the selected issues and remove related device/vehicle data when no other issues remain on those devices."
+          onClose={() => setBulkDeleteOpen(false)}
+          onConfirm={handleConfirmBulkDelete}
+        />
+      ) : null}
 
       <Toasts toasts={toasts} />
     </div>

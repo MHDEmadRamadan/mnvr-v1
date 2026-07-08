@@ -12,6 +12,7 @@ type IssuesToolbarProps = {
   onBulkDelete: () => void;
   hasActiveFilters: boolean;
   exportDisabled?: boolean;
+  canDelete?: boolean;
 };
 
 export function IssuesToolbar({
@@ -23,6 +24,7 @@ export function IssuesToolbar({
   onBulkDelete,
   hasActiveFilters,
   exportDisabled,
+  canDelete = false,
 }: IssuesToolbarProps) {
   return (
     <div className="flex flex-col gap-3 border-b border-zinc-200/80 px-4 py-3 dark:border-zinc-800/80 sm:flex-row sm:items-center sm:justify-between">
@@ -37,7 +39,7 @@ export function IssuesToolbar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {selectedCount > 0 ? (
+        {canDelete && selectedCount > 0 ? (
           <Button variant="destructive" size="sm" onClick={onBulkDelete}>
             Delete {selectedCount} selected
           </Button>

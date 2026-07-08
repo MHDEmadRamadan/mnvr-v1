@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
-type NavItem = { href: string; label: string };
+type NavItem = { href: string; label: string; adminOnly?: boolean };
 
-const NAV: NavItem[] = [
+const BASE_NAV: NavItem[] = [
   { href: "/issues", label: "Issues" },
-  { href: "/reports", label: "Reports" },
-  { href: "/settings", label: "Settings" },
+  { href: "/reports", label: "Reports", adminOnly: true },
+  { href: "/profile", label: "Profile" },
+  { href: "/admin/users", label: "Users", adminOnly: true },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -19,9 +21,15 @@ function isActive(pathname: string, href: string) {
 export function Sidebar() {
   const pathname = usePathname() || "/";
   const [collapsed, setCollapsed] = useState(false);
+  const { isAdmin } = useAuth();
   const widthClass = collapsed ? "w-16" : "w-64";
 
-  const items = NAV.map((item) => ({
+  const nav = useMemo(
+    () => BASE_NAV.filter((item) => !item.adminOnly || isAdmin),
+    [isAdmin],
+  );
+
+  const items = nav.map((item) => ({
     ...item,
     active: isActive(pathname, item.href),
   }));
@@ -73,7 +81,17 @@ export function Sidebar() {
                   : "text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800",
               ].join(" ")}
             >
-              <span className="text-base leading-none">{item.label === "Issues" ? "🧩" : item.label === "Reports" ? "📊" : "⚙️"}</span>
+              <span className="text-base leading-none">
+                {item.label === "Issues"
+                  ? "🧩"
+                  : item.label === "Reports"
+                    ? "📊"
+                    : item.label === "Users"
+                      ? "👥"
+                      : item.label === "Profile"
+                        ? "👤"
+                        : "⚙️"}
+              </span>
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           ))}

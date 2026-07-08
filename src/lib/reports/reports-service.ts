@@ -1,7 +1,7 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Issue } from "@/types/issue";
 import type { ReportExportFormat, ReportFilters, ReportMetrics, ReportQueryResult } from "@/types/reports";
 import { mapIssueFromRow, type IssueRowWithRelations } from "@/lib/issues-mapper";
-import { getSupabaseServerClient } from "@/lib/supabase-server";
 import { computeReportMetrics } from "@/lib/reports/reports-metrics";
 import { buildReportExportBuffer } from "@/lib/reports/reports-export";
 import { logReportQuery, logReportQueryError } from "@/lib/reports/reports-debug";
@@ -35,11 +35,11 @@ function computeTotalPages(total: number, pageSize: number): number {
 }
 
 export async function queryReportIssues(
+  supabase: SupabaseClient,
   filters: ReportFilters,
   page: number,
   pageSize: number,
 ): Promise<ReportQueryResult> {
-  const supabase = getSupabaseServerClient();
   const safePage = Math.max(1, page);
   const from = (safePage - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -79,8 +79,10 @@ export async function queryReportIssues(
 }
 
 /** Server-side chunked fetch for metrics — never sent to browser in bulk. */
-export async function fetchReportIssuesForMetrics(filters: ReportFilters): Promise<Issue[]> {
-  const supabase = getSupabaseServerClient();
+export async function fetchReportIssuesForMetrics(
+  supabase: SupabaseClient,
+  filters: ReportFilters,
+): Promise<Issue[]> {
   const select = buildReportsSelect(filters);
   const rows: Issue[] = [];
   let offset = 0;
@@ -116,15 +118,19 @@ export async function fetchReportIssuesForMetrics(filters: ReportFilters): Promi
   return rows;
 }
 
-export async function computeReportMetricsForFilters(filters: ReportFilters): Promise<ReportMetrics> {
-  const rows = await fetchReportIssuesForMetrics(filters);
+export async function computeReportMetricsForFilters(
+  supabase: SupabaseClient,
+  filters: ReportFilters,
+): Promise<ReportMetrics> {
+  const rows = await fetchReportIssuesForMetrics(supabase, filters);
   return computeReportMetrics(rows);
 }
 
 export async function exportReportIssues(
+  supabase: SupabaseClient,
   filters: ReportFilters,
   format: ReportExportFormat,
 ): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
-  const rows = await fetchReportIssuesForMetrics(filters);
+  const rows = await fetchReportIssuesForMetrics(supabase, filters);
   return buildReportExportBuffer(rows, format);
 }

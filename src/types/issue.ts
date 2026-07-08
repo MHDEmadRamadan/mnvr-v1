@@ -13,6 +13,8 @@ import type {
   ReplacementSsd,
 } from "@/types/replacements";
 
+import type { IssueWorkflowStatus } from "@/types/auth";
+
 export type Issue = {
   id: string;
   deviceId: string;
@@ -25,6 +27,14 @@ export type Issue = {
   description: string;
   issueSource: string;
   createdAt: string;
+  /** Kept for DB column compatibility; not used as a workflow in the UI. */
+  status?: IssueWorkflowStatus;
+  createdById?: string | null;
+  createdByName?: string | null;
+  /** Maps from DB `resolved_by` — displayed as Edited by. */
+  editedById?: string | null;
+  editedByName?: string | null;
+  editedAt?: string | null;
   vehicleId?: string | null;
   vehicleNumber?: string | null;
   vehicleDescription?: string | null;

@@ -6,6 +6,7 @@ import { defaultReportFilters } from "@/lib/reports/reports-filters";
 import { downloadReportExport, fetchReportMetrics, fetchReportQuery } from "@/lib/reports/reports-client";
 import { REPORTS_PAGE_SIZE_DEFAULT } from "@/lib/reports/reports-query";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAuth } from "@/contexts/AuthContext";
 
 const EMPTY_METRICS: ReportMetrics = {
   totalIssues: 0,
@@ -32,6 +33,7 @@ function toErrorMessage(error: unknown): string {
 }
 
 export function useReports(initialFilters?: ReportFilters) {
+  const { getAccessToken, isAdmin } = useAuth();
   const [filters, setFilters] = useState<ReportFilters>(initialFilters ?? defaultReportFilters());
   const [appliedFilters, setAppliedFilters] = useState<ReportFilters>(filters);
   const debouncedApplied = useDebouncedValue(appliedFilters, 300);
@@ -61,6 +63,8 @@ export function useReports(initialFilters?: ReportFilters) {
   }, []);
 
   useEffect(() => {
+    if (!isAdmin) return;
+
     let cancelled = false;
     /* eslint-disable react-hooks/set-state-in-effect -- loading flag when report filters change */
     setLoading(true);
@@ -68,7 +72,7 @@ export function useReports(initialFilters?: ReportFilters) {
 
     void (async () => {
       try {
-        const result = await fetchReportQuery(debouncedApplied, page, pageSize);
+        const result = await fetchReportQuery(getAccessToken, debouncedApplied, page, pageSize);
         if (!cancelled) setQuery(result);
       } catch (e) {
         if (!cancelled) {
@@ -83,16 +87,18 @@ export function useReports(initialFilters?: ReportFilters) {
     return () => {
       cancelled = true;
     };
-  }, [filtersKey, page, pageSize, debouncedApplied]);
+  }, [filtersKey, page, pageSize, debouncedApplied, getAccessToken, isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin) return;
+
     let cancelled = false;
     /* eslint-disable react-hooks/set-state-in-effect -- metrics loading when filters change */
     setMetricsLoading(true);
 
     void (async () => {
       try {
-        const data = await fetchReportMetrics(debouncedApplied);
+        const data = await fetchReportMetrics(getAccessToken, debouncedApplied);
         if (!cancelled) setMetrics(data);
       } catch {
         if (!cancelled) setMetrics(EMPTY_METRICS);
@@ -104,18 +110,18 @@ export function useReports(initialFilters?: ReportFilters) {
     return () => {
       cancelled = true;
     };
-  }, [filtersKey, debouncedApplied]);
+  }, [filtersKey, debouncedApplied, getAccessToken, isAdmin]);
 
   const exportReport = useCallback(
     async (format: "csv" | "xlsx") => {
       setExporting(format);
       try {
-        await downloadReportExport(debouncedApplied, format);
+        await downloadReportExport(getAccessToken, debouncedApplied, format);
       } finally {
         setExporting(null);
       }
     },
-    [debouncedApplied],
+    [debouncedApplied, getAccessToken],
   );
 
   return {

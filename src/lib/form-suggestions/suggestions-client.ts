@@ -4,6 +4,7 @@ import {
   type FormSuggestionFieldName,
 } from "@/lib/form-suggestions/field-map";
 import { clientSuggestionsCache } from "@/lib/form-suggestions/suggestions-cache";
+import { isValidAccessToken } from "@/lib/auth-token";
 
 type SuggestionsResponse = {
   field?: string;
@@ -12,14 +13,25 @@ type SuggestionsResponse = {
   error?: string;
 };
 
+async function authHeaders(getAccessToken: () => Promise<string | null>): Promise<HeadersInit> {
+  const token = await getAccessToken();
+  if (!isValidAccessToken(token)) {
+    throw new Error("Not authenticated. Please sign in again.");
+  }
+  return { Authorization: `Bearer ${token}` };
+}
+
 async function fetchSuggestionsFromApi(
+  getAccessToken: () => Promise<string | null>,
   fieldName?: string,
   refresh?: boolean,
 ): Promise<SuggestionsResponse> {
   const params = new URLSearchParams();
   if (fieldName) params.set("field", fieldName);
   if (refresh) params.set("refresh", "1");
-  const res = await fetch(`/api/form-suggestions?${params.toString()}`);
+  const res = await fetch(`/api/form-suggestions?${params.toString()}`, {
+    headers: await authHeaders(getAccessToken),
+  });
   const body = (await res.json()) as SuggestionsResponse;
   if (!res.ok) {
     throw new Error(body.error ?? `Failed to load suggestions (${res.status})`);
@@ -31,6 +43,7 @@ async function fetchSuggestionsFromApi(
  * Client-side getFieldSuggestions — fetches distinct DB values via API with in-memory cache.
  */
 export async function getFieldSuggestions(
+  getAccessToken: () => Promise<string | null>,
   fieldName: string,
   options?: { refresh?: boolean },
 ): Promise<string[]> {
@@ -43,14 +56,16 @@ export async function getFieldSuggestions(
     if (cached) return cached;
   }
 
-  const body = await fetchSuggestionsFromApi(fieldName, options?.refresh);
+  const body = await fetchSuggestionsFromApi(getAccessToken, fieldName, options?.refresh);
   const values = body.values ?? [];
   clientSuggestionsCache.set(fieldName, values);
   return values;
 }
 
 /** Prefetch all combobox suggestion lists (used when the form opens). */
-export async function getAllFieldSuggestions(options?: {
+export async function getAllFieldSuggestions(
+  getAccessToken: () => Promise<string | null>,
+  options?: {
   refresh?: boolean;
 }): Promise<Record<FormSuggestionFieldName, string[]>> {
   if (!options?.refresh) {
@@ -62,7 +77,7 @@ export async function getAllFieldSuggestions(options?: {
     }
   }
 
-  const body = await fetchSuggestionsFromApi(undefined, options?.refresh);
+  const body = await fetchSuggestionsFromApi(getAccessToken, undefined, options?.refresh);
   const suggestions = body.suggestions ?? ({} as Record<FormSuggestionFieldName, string[]>);
 
   for (const field of ALL_FORM_SUGGESTION_FIELDS) {

@@ -184,11 +184,15 @@ export function IssueViewDrawer({ open, issue, onClose, onEdit }: IssueViewDrawe
           <TextField label="PMM Issue" value={issue.pmmIssue} />
           <TextField label="SSD Issue" value={issue.ssdIssue} />
           <TextField label="Other Issue" value={issue.otherIssue} />
+          <TextField label="Created by" value={issue.createdByName} />
+          <TextField label="Edited by" value={issue.editedByName} />
           <Field label="Created At">
             <span className="whitespace-nowrap">{formatDisplayDate(issue.createdAt)}</span>
           </Field>
-          <Field label="Updated At">
-            <span className="text-zinc-400">—</span>
+          <Field label="Edited at">
+            <span className="whitespace-nowrap">
+              {issue.editedAt ? formatDisplayDate(issue.editedAt) : "—"}
+            </span>
           </Field>
           <div className="sm:col-span-2">
             <Field label="Description">

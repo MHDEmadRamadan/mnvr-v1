@@ -24,6 +24,7 @@ type IssuesDashboardTableProps = {
   onEdit: (issue: Issue) => void;
   onDelete: (issue: Issue) => void;
   onCopy: (issue: Issue) => void;
+  canDelete?: boolean;
 };
 
 export function IssuesDashboardTable({
@@ -41,6 +42,7 @@ export function IssuesDashboardTable({
   onEdit,
   onDelete,
   onCopy,
+  canDelete = false,
 }: IssuesDashboardTableProps) {
   const renderActions = useCallback(
     (row: Issue) => (
@@ -54,12 +56,14 @@ export function IssuesDashboardTable({
         <TableActionButton variant="secondary" onClick={() => onCopy(row)} title="Copy row to clipboard">
           Copy
         </TableActionButton>
-        <TableActionButton variant="destructive" onClick={() => onDelete(row)}>
-          Delete
-        </TableActionButton>
+        {canDelete ? (
+          <TableActionButton variant="destructive" onClick={() => onDelete(row)}>
+            Delete
+          </TableActionButton>
+        ) : null}
       </TableRowActions>
     ),
-    [onView, onEdit, onDelete, onCopy],
+    [onView, onEdit, onDelete, onCopy, canDelete],
   );
 
   return (

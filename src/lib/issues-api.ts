@@ -23,7 +23,6 @@ import {
   applyIssueFilters,
   CRITICAL_OR,
   ISSUES_ENRICHED_SELECT,
-  RESOLVED_OR,
 } from "@/lib/issues-query";
 
 export type IssuesDbCounts = {
@@ -105,33 +104,23 @@ export async function fetchIssueKpis(filters: IssueQueryFilters): Promise<IssueK
     supabase.from("issues").select("*", { count: "exact", head: true }),
     filters,
   );
-  const resolvedQuery = applyIssueFilters(
-    supabase.from("issues").select("*", { count: "exact", head: true }),
-    filters,
-  ).or(RESOLVED_OR);
   const criticalQuery = applyIssueFilters(
     supabase.from("issues").select("*", { count: "exact", head: true }),
     filters,
   ).or(CRITICAL_OR);
 
-  const [totalRes, resolvedRes, criticalRes] = await Promise.all([
-    totalQuery,
-    resolvedQuery,
-    criticalQuery,
-  ]);
+  const [totalRes, criticalRes] = await Promise.all([totalQuery, criticalQuery]);
 
   if (totalRes.error) throw new Error(totalRes.error.message);
-  if (resolvedRes.error) throw new Error(resolvedRes.error.message);
   if (criticalRes.error) throw new Error(criticalRes.error.message);
 
   const total = totalRes.count ?? 0;
-  const resolved = resolvedRes.count ?? 0;
   const critical = criticalRes.count ?? 0;
 
   return {
     total,
-    open: Math.max(0, total - resolved),
-    resolved,
+    open: 0,
+    resolved: 0,
     critical,
   };
 }

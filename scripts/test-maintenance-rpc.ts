@@ -37,15 +37,33 @@ async function main() {
   const env = loadEnv();
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
   const key = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const testEmail = env.TEST_USER_EMAIL;
+  const testPassword = env.TEST_USER_PASSWORD;
 
   if (!url || !key) {
     console.error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local");
     process.exit(1);
   }
 
+  if (!testEmail || !testPassword) {
+    console.error(
+      "Missing TEST_USER_EMAIL or TEST_USER_PASSWORD in .env.local (required since RPCs need authentication).",
+    );
+    process.exit(1);
+  }
+
   const supabase = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: testEmail,
+    password: testPassword,
+  });
+  if (signInError) {
+    console.error(`Failed to sign in test user (${testEmail}):`, signInError.message);
+    process.exit(1);
+  }
 
   const report = await runMaintenanceRpcTestSuite(supabase, { stopOnFirstFail: true });
   printMaintenanceRpcTestSummary(report);

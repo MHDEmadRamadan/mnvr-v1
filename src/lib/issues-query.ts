@@ -8,6 +8,8 @@ const RESOLVED_OR = "issue_type.ilike.%resolved%,issue_type.ilike.%closed%";
 /** Full enriched select for issues list + CRUD return payloads. */
 export const ISSUES_ENRICHED_SELECT = `
   *,
+  created_by_profile:created_by ( full_name, email ),
+  resolved_by_profile:resolved_by ( full_name, email ),
   device:device_id (
     id,
     imei,

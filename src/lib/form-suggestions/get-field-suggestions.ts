@@ -1,4 +1,4 @@
-import { getSupabaseServerClient } from "@/lib/supabase-server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   ALL_FORM_SUGGESTION_FIELDS,
   isFormSuggestionFieldName,
@@ -24,8 +24,11 @@ function collectDistinct(values: Iterable<string>): string[] {
   return out;
 }
 
-async function fetchDistinctFromTable(table: string, column: string): Promise<string[]> {
-  const supabase = getSupabaseServerClient();
+async function fetchDistinctFromTable(
+  supabase: SupabaseClient,
+  table: string,
+  column: string,
+): Promise<string[]> {
   const collected: string[] = [];
   let offset = 0;
 
@@ -57,6 +60,7 @@ async function fetchDistinctFromTable(table: string, column: string): Promise<st
  * Results are cached server-side for performance.
  */
 export async function getFieldSuggestions(
+  supabase: SupabaseClient,
   fieldName: string,
   options?: { refresh?: boolean },
 ): Promise<string[]> {
@@ -72,18 +76,20 @@ export async function getFieldSuggestions(
   const source = resolveFieldSuggestionSource(fieldName);
   if (!source) return [];
 
-  const values = await fetchDistinctFromTable(source.table, source.column);
+  const values = await fetchDistinctFromTable(supabase, source.table, source.column);
   serverSuggestionsCache.set(fieldName, values);
   return values;
 }
 
 /** Load all autocomplete field suggestions in parallel. */
-export async function getAllFieldSuggestions(options?: {
+export async function getAllFieldSuggestions(
+  supabase: SupabaseClient,
+  options?: {
   refresh?: boolean;
 }): Promise<Record<FormSuggestionFieldName, string[]>> {
   const entries = await Promise.all(
     ALL_FORM_SUGGESTION_FIELDS.map(async (field) => {
-      const values = await getFieldSuggestions(field, options);
+      const values = await getFieldSuggestions(supabase, field, options);
       return [field, values] as const;
     }),
   );

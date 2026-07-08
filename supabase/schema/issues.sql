@@ -26,6 +26,25 @@ alter table public.device add column if not exists tickets text;
 
 create index if not exists device_vehicle_id_idx on public.device (vehicle_id);
 
+-- device_vehicle_history (assignment audit trail for maintenance RPCs)
+create table if not exists public.device_vehicle_history (
+  id uuid primary key default gen_random_uuid(),
+  device_id uuid not null references public.device (id) on delete cascade,
+  vehicle_id uuid not null references public.vehicles (id) on delete cascade,
+  assigned_at timestamptz not null default now(),
+  unassigned_at timestamptz
+);
+
+create index if not exists device_vehicle_history_device_id_idx
+  on public.device_vehicle_history (device_id);
+
+create index if not exists device_vehicle_history_vehicle_id_idx
+  on public.device_vehicle_history (vehicle_id);
+
+create unique index if not exists device_vehicle_history_active_device_idx
+  on public.device_vehicle_history (device_id)
+  where unassigned_at is null;
+
 -- device_status
 create table if not exists public.device_status (
   id uuid primary key default gen_random_uuid(),
@@ -149,6 +168,7 @@ alter table public.device_status enable row level security;
 alter table public.hardware enable row level security;
 alter table public.storage enable row level security;
 alter table public.replacements enable row level security;
+alter table public.device_vehicle_history enable row level security;
 
 drop policy if exists "device_select_anon" on public.device;
 create policy "device_select_anon" on public.device for select to anon, authenticated using (true);
@@ -204,6 +224,57 @@ create policy "replacements_insert_anon" on public.replacements for insert to an
 
 drop policy if exists "replacements_update_anon" on public.replacements;
 create policy "replacements_update_anon" on public.replacements for update to anon, authenticated using (true) with check (true);
+
+drop policy if exists "device_vehicle_history_select_anon" on public.device_vehicle_history;
+create policy "device_vehicle_history_select_anon"
+  on public.device_vehicle_history for select to anon, authenticated using (true);
+
+-- Records device ↔ vehicle assignment changes (called by maintenance RPCs).
+create or replace function public.record_device_vehicle_assignment(
+  p_device_id uuid,
+  p_new_vehicle_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_current_vehicle_id uuid;
+begin
+  if p_device_id is null or p_new_vehicle_id is null then
+    return;
+  end if;
+
+  select vehicle_id into v_current_vehicle_id
+  from public.device
+  where id = p_device_id;
+
+  if v_current_vehicle_id is null then
+    return;
+  end if;
+
+  if v_current_vehicle_id is distinct from p_new_vehicle_id then
+    update public.device_vehicle_history
+    set unassigned_at = now()
+    where device_id = p_device_id
+      and unassigned_at is null;
+
+    insert into public.device_vehicle_history (device_id, vehicle_id)
+    values (p_device_id, p_new_vehicle_id);
+  elsif not exists (
+    select 1
+    from public.device_vehicle_history
+    where device_id = p_device_id
+      and unassigned_at is null
+  ) then
+    insert into public.device_vehicle_history (device_id, vehicle_id)
+    values (p_device_id, p_new_vehicle_id);
+  end if;
+end;
+$$;
+
+grant execute on function public.record_device_vehicle_assignment(uuid, uuid) to anon, authenticated;
 
 -- Atomic create: vehicle → device → status → hardware → storage → replacements → issue
 -- Returns all issues for the device (1 device → many issues).

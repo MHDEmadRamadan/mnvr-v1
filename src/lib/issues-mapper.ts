@@ -32,7 +32,18 @@ export type IssueRow = {
   description: string | null;
   issue_source: string | null;
   created_at: string;
+  status?: "open" | "resolved" | null;
+  created_by?: string | null;
+  resolved_by?: string | null;
+  edited_at?: string | null;
+  created_by_profile?: ProfileJoin | ProfileJoin[] | null;
+  resolved_by_profile?: ProfileJoin | ProfileJoin[] | null;
 };
+
+type ProfileJoin = {
+  full_name: string | null;
+  email: string | null;
+} | null;
 
 type VehicleJoin = {
   id: string;
@@ -154,6 +165,17 @@ function nullableStr(value: string | null | undefined): string | null {
   return value;
 }
 
+/** Display name for issue creator/editor; never exposes raw UUIDs. */
+export function profileDisplayName(
+  profile: ProfileJoin | null,
+  userId: string | null | undefined,
+): string | null {
+  if (!userId) return null;
+  const name =
+    nullableStr(profile?.full_name ?? null) ?? nullableStr(profile?.email ?? null);
+  return name ?? "Unknown User";
+}
+
 /** Safely read a UUID from a join row id field (string or mistaken `{ id }` object). */
 function joinRowId(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
@@ -171,6 +193,8 @@ export function mapIssueFromRow(row: IssueRowWithRelations): Issue {
   const hardware = pickLatest(device?.hardware ?? null);
   const storage = pickLatest(device?.storage ?? null);
   const replacements = pickLatest(device?.replacements ?? null);
+  const creator = pickOne(row.created_by_profile ?? null);
+  const editor = pickOne(row.resolved_by_profile ?? null);
 
   return {
     id: extractUuidString(row.id, "issue.id"),
@@ -183,6 +207,12 @@ export function mapIssueFromRow(row: IssueRowWithRelations): Issue {
     description: str(row.description),
     issueSource: str(row.issue_source),
     createdAt: row.created_at,
+    status: row.status === "resolved" ? "resolved" : "open",
+    createdById: row.created_by ?? null,
+    createdByName: profileDisplayName(creator, row.created_by),
+    editedById: row.resolved_by ?? null,
+    editedByName: profileDisplayName(editor, row.resolved_by),
+    editedAt: row.edited_at ?? null,
     vehicleId: joinRowId(vehicle?.id),
     vehicleNumber: nullableStr(vehicle?.vehicle_number ?? null),
     vehicleDescription: nullableStr(vehicle?.description ?? null),

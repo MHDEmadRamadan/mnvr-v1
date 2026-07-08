@@ -297,6 +297,31 @@ export const ISSUES_TABLE_GROUPS: DataTableColumnGroup<Issue>[] = [
     label: "Meta",
     columns: [
       {
+        id: "createdByName",
+        label: "Created by",
+        className: "min-w-[120px]",
+        sortValue: (r) => r.createdByName ?? "",
+        render: (r) => text(r.createdByName),
+      },
+      {
+        id: "editedByName",
+        label: "Edited by",
+        className: "min-w-[120px]",
+        sortValue: (r) => r.editedByName ?? "",
+        render: (r) => text(r.editedByName),
+      },
+      {
+        id: "editedAt",
+        label: "Edited at",
+        className: "w-[150px]",
+        sortValue: (r) => r.editedAt ?? "",
+        render: (r) => (
+          <span className="whitespace-nowrap text-xs text-zinc-600 dark:text-zinc-400">
+            {r.editedAt ? formatDisplayDate(r.editedAt) : "—"}
+          </span>
+        ),
+      },
+      {
         id: "createdAt",
         label: "Created",
         className: "w-[150px]",

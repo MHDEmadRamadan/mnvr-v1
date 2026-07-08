@@ -8,10 +8,12 @@ import {
   invalidateFieldSuggestionsCache,
 } from "@/lib/form-suggestions/suggestions-client";
 import type { FormSuggestionFieldName } from "@/lib/form-suggestions/field-map";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SuggestionsMap = Partial<Record<FormSuggestionFieldName, string[]>>;
 
 export function useFieldSuggestions(enabled = true) {
+  const { getAccessToken } = useAuth();
   const [suggestions, setSuggestions] = useState<SuggestionsMap>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,14 +22,14 @@ export function useFieldSuggestions(enabled = true) {
     setLoading(true);
     setError(null);
     try {
-      const data = await getAllFieldSuggestions({ refresh });
+      const data = await getAllFieldSuggestions(getAccessToken, { refresh });
       setSuggestions(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load suggestions");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getAccessToken]);
 
   useEffect(() => {
     if (!enabled) return;

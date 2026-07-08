@@ -9,14 +9,12 @@ type IssueKpiCardsProps = {
 
 const cards = [
   { key: "total" as const, label: "Total issues", accent: "border-l-blue-500" },
-  { key: "open" as const, label: "Open issues", accent: "border-l-amber-500" },
-  { key: "resolved" as const, label: "Resolved issues", accent: "border-l-emerald-500" },
   { key: "critical" as const, label: "Critical issues", accent: "border-l-red-500" },
 ];
 
 export function IssueKpiCards({ kpis, loading }: IssueKpiCardsProps) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {cards.map((card) => (
         <div
           key={card.key}
