@@ -82,6 +82,9 @@ export function MaintenanceRecordForm({
                 aria-labelledby={`${panelId}-trigger`}
                 className="border-t border-zinc-200/80 px-4 py-4 dark:border-zinc-800"
               >
+                {section.description ? (
+                  <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">{section.description}</p>
+                ) : null}
                 <div className={section.gridClassName}>
                   {fields.map((field) => (
                     <FormFieldRenderer

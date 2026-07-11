@@ -36,20 +36,29 @@ export type MaintenanceFormFieldConfig = {
   enumOptions?: readonly string[];
   allowCustom?: boolean;
   placeholder?: string;
-  hint?: string;
   className?: string;
   autoComplete?: string;
+  /** Omit from Add/Edit form UI; value still submitted from form state. */
+  hidden?: boolean;
+  /** Render without a field label (section description provides context). */
+  hideLabel?: boolean;
 };
 
 export const MAINTENANCE_FORM_SECTIONS: {
   id: MaintenanceFormSectionId;
   title: string;
+  description?: string;
   gridClassName: string;
 }[] = [
   { id: "vehicle", title: "Vehicle", gridClassName: "grid grid-cols-1 gap-4 md:grid-cols-2" },
   { id: "device", title: "Device", gridClassName: "grid grid-cols-1 gap-4 md:grid-cols-2" },
   { id: "deviceStatus", title: "Device Status", gridClassName: "grid grid-cols-1 gap-4 md:grid-cols-2" },
-  { id: "issue", title: "Issue Information", gridClassName: "grid grid-cols-1 gap-4 md:grid-cols-2" },
+  {
+    id: "issue",
+    title: "Issue Information",
+    description: "Issue description",
+    gridClassName: "grid grid-cols-1 gap-4 md:grid-cols-2",
+  },
   { id: "hardware", title: "Hardware", gridClassName: "grid grid-cols-1 gap-4 md:grid-cols-2" },
   { id: "storage", title: "Storage", gridClassName: "grid grid-cols-1 gap-4 md:grid-cols-2" },
   {
@@ -67,6 +76,7 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     type: "textarea",
     section: "vehicle",
     className: "md:col-span-2",
+    hidden: true,
   },
   {
     key: "imei",
@@ -82,13 +92,13 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     type: "textarea",
     section: "device",
     className: "md:col-span-2",
+    hidden: true,
   },
   {
     key: "deviceTickets",
     label: "Tickets (Jira URL or reference)",
     type: "text",
     section: "device",
-    hint: "Optional — paste a Jira URL or ticket key",
     className: "md:col-span-2",
   },
   {
@@ -131,6 +141,7 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     type: "textarea",
     section: "deviceStatus",
     className: "md:col-span-2",
+    hidden: true,
   },
   {
     key: "motherboardType",
@@ -154,6 +165,7 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     type: "textarea",
     section: "hardware",
     className: "md:col-span-2",
+    hidden: true,
   },
   {
     key: "ssdType",
@@ -181,6 +193,7 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     type: "textarea",
     section: "storage",
     className: "md:col-span-2",
+    hidden: true,
   },
   {
     key: "ssd",
@@ -224,6 +237,7 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     type: "textarea",
     section: "replacements",
     className: "sm:col-span-2 lg:col-span-3",
+    hidden: true,
   },
   {
     key: "issueType",
@@ -280,11 +294,12 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     type: "textarea",
     section: "issue",
     className: "md:col-span-2",
+    hideLabel: true,
   },
 ];
 
 export function fieldsForSection(section: MaintenanceFormSectionId): MaintenanceFormFieldConfig[] {
-  return MAINTENANCE_FORM_FIELDS.filter((f) => f.section === section);
+  return MAINTENANCE_FORM_FIELDS.filter((f) => f.section === section && !f.hidden);
 }
 
 export const COMBOBOX_FORM_FIELDS = MAINTENANCE_FORM_FIELDS.filter((f) => f.type === "combobox");

@@ -5,6 +5,7 @@ import type { Issue, IssueCreateInput, IssueUpdateInput } from "@/types/issue";
 import { emptyMaintenanceRecordForm, type MaintenanceRecordFormValues } from "@/types/maintenance-record";
 import { issueToMaintenanceForm, issueToMaintenanceUpdate } from "@/lib/issues-mapper";
 import { validateMaintenanceRecordForm } from "@/lib/maintenance-record-schema";
+import { applyMaintenanceFormPatch } from "@/lib/maintenance-form-patch";
 import { useFieldSuggestions } from "@/hooks/useFieldSuggestions";
 import { MaintenanceRecordForm } from "@/components/issues/MaintenanceRecordForm";
 import { dashboardBtnPrimary, dashboardBtnSecondary, dashboardPanel } from "@/components/issues/dashboard-ui";
@@ -107,7 +108,7 @@ export function IssueModal({
             <MaintenanceRecordForm
               values={values}
               errors={errors}
-              onChange={(patch) => setValues((prev) => ({ ...prev, ...patch }))}
+              onChange={(patch) => setValues((prev) => applyMaintenanceFormPatch(prev, patch))}
               getComboboxOptions={getComboboxOptions}
               suggestionsLoading={suggestionsLoading}
               suggestionsError={suggestionsError}

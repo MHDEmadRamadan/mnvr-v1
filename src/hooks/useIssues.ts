@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   Issue,
   IssueCreateInput,
@@ -8,17 +8,17 @@ import type {
   IssueQueryParams,
   IssueUpdateInput,
 } from "@/types/issue";
-import { runIssuePipeline } from "@/lib/issues/pipeline";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   createIssue as apiCreate,
   deleteIssue as apiDelete,
   deleteIssues as apiDeleteMany,
-  fetchEnrichedIssueDataset,
   fetchIssueKpis,
-  subscribeToIssues,
+  fetchIssues,
   updateIssue as apiUpdate,
   type IssuesDbCounts,
 } from "@/lib/issues-api";
+import { subscribeToIssueChanges } from "@/lib/issues/issues-realtime";
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong";
@@ -27,58 +27,86 @@ function toErrorMessage(error: unknown): string {
 const EMPTY_KPIS: IssueKpis = { total: 0, open: 0, resolved: 0, critical: 0 };
 
 export function useIssues(params: IssueQueryParams) {
-  const [dataset, setDataset] = useState<Issue[]>([]);
+  const { isAuthenticated } = useAuth();
+  const [items, setItems] = useState<Issue[]>([]);
+  const [total, setTotal] = useState(0);
+  const [safePage, setSafePage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [kpis, setKpis] = useState<IssueKpis>(EMPTY_KPIS);
   const [dbCounts, setDbCounts] = useState<IssuesDbCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const filtersKey = JSON.stringify(params.filters);
-
-  const loadDataset = useCallback(async () => {
-    const [rows, kpiData] = await Promise.all([
-      fetchEnrichedIssueDataset(params.filters),
-      fetchIssueKpis(params.filters),
-    ]);
-    const deviceIds = new Set(rows.map((r) => r.deviceId));
-    setDataset(rows);
-    setDbCounts({ issueRecords: rows.length, devices: deviceIds.size });
-    setKpis(kpiData);
-    return rows;
-  }, [params.filters]);
-
-  const reload = useCallback(
-    async (showLoading: boolean) => {
-      if (showLoading) setLoading(true);
-      setError(null);
-      try {
-        await loadDataset();
-      } catch (e) {
-        setError(toErrorMessage(e));
-        setDataset([]);
-        setDbCounts(null);
-        setKpis(EMPTY_KPIS);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [loadDataset],
+  const paramsKey = useMemo(
+    () =>
+      JSON.stringify({
+        filters: params.filters,
+        page: params.page,
+        pageSize: params.pageSize,
+        sort: params.sort,
+      }),
+    [params.filters, params.page, params.pageSize, params.sort],
   );
+
+  const loadPage = useCallback(async (showLoading: boolean) => {
+    if (showLoading) setLoading(true);
+    setError(null);
+    try {
+      const [pageResult, kpiData] = await Promise.all([
+        fetchIssues(params),
+        fetchIssueKpis(params.filters),
+      ]);
+      setItems(pageResult.items);
+      setTotal(pageResult.total);
+      setSafePage(pageResult.safePage);
+      setTotalPages(pageResult.totalPages);
+      setDbCounts(pageResult.dbCounts ?? null);
+      setKpis(kpiData);
+    } catch (e) {
+      setError(toErrorMessage(e));
+      setItems([]);
+      setTotal(0);
+      setSafePage(1);
+      setTotalPages(1);
+      setDbCounts(null);
+      setKpis(EMPTY_KPIS);
+    } finally {
+      setLoading(false);
+    }
+  }, [params]);
+
+  const loadPageRef = useRef(loadPage);
+  useEffect(() => {
+    loadPageRef.current = loadPage;
+  }, [loadPage]);
 
   useEffect(() => {
     let cancelled = false;
-    /* eslint-disable react-hooks/set-state-in-effect -- loading flag when filters change */
+    /* eslint-disable react-hooks/set-state-in-effect -- loading flag when query params change */
     setLoading(true);
     setError(null);
 
     void (async () => {
       try {
-        await loadDataset();
-        if (!cancelled) setError(null);
+        const [pageResult, kpiData] = await Promise.all([
+          fetchIssues(params),
+          fetchIssueKpis(params.filters),
+        ]);
+        if (cancelled) return;
+        setItems(pageResult.items);
+        setTotal(pageResult.total);
+        setSafePage(pageResult.safePage);
+        setTotalPages(pageResult.totalPages);
+        setDbCounts(pageResult.dbCounts ?? null);
+        setKpis(kpiData);
+        setError(null);
       } catch (e) {
         if (!cancelled) {
           setError(toErrorMessage(e));
-          setDataset([]);
+          setItems([]);
+          setTotal(0);
+          setSafePage(1);
+          setTotalPages(1);
           setDbCounts(null);
           setKpis(EMPTY_KPIS);
         }
@@ -90,76 +118,55 @@ export function useIssues(params: IssueQueryParams) {
     return () => {
       cancelled = true;
     };
-  }, [filtersKey, loadDataset]);
+  }, [paramsKey, params]);
 
+  // Realtime: refetch current page when another user (or tab) changes issues.
+  // RLS on postgres_changes ensures only visible rows trigger events.
   useEffect(() => {
-    return subscribeToIssues(() => {
-      void reload(false);
-    });
-  }, [reload]);
+    if (!isAuthenticated) return;
 
-  const pipeline = useMemo(
-    () => runIssuePipeline(dataset, params.filters, params.sort, params.page, params.pageSize),
-    [dataset, params.filters, params.sort, params.page, params.pageSize],
-  );
+    return subscribeToIssueChanges(() => {
+      void loadPageRef.current(false);
+    });
+  }, [isAuthenticated]);
 
   const create = useCallback(
     async (input: IssueCreateInput) => {
       const created = await apiCreate(input);
-      await reload(false);
+      await loadPage(false);
       return created;
     },
-    [reload],
+    [loadPage],
   );
 
   const update = useCallback(
     async (id: string, patch: IssueUpdateInput) => {
       const saved = await apiUpdate(id, patch);
-      setDataset((prev) => prev.map((row) => (row.id === id ? saved : row)));
+      setItems((prev) => prev.map((row) => (row.id === id ? saved : row)));
       return saved;
     },
     [],
   );
 
   const remove = useCallback(async (id: string) => {
-    let snapshot: Issue[] = [];
-    setDataset((prev) => {
-      snapshot = prev;
-      return prev.filter((row) => row.id !== id);
-    });
-    try {
-      await apiDelete(id);
-    } catch (e) {
-      setDataset(snapshot);
-      throw e;
-    }
-  }, []);
+    await apiDelete(id);
+    await loadPage(false);
+  }, [loadPage]);
 
   const removeMany = useCallback(async (ids: string[]) => {
     if (ids.length === 0) return;
-    let snapshot: Issue[] = [];
-    const idSet = new Set(ids);
-    setDataset((prev) => {
-      snapshot = prev;
-      return prev.filter((row) => !idSet.has(row.id));
-    });
-    try {
-      await apiDeleteMany(ids);
-    } catch (e) {
-      setDataset(snapshot);
-      throw e;
-    }
-  }, []);
+    await apiDeleteMany(ids);
+    await loadPage(false);
+  }, [loadPage]);
 
-  const refetch = useCallback(() => reload(true), [reload]);
+  const refetch = useCallback(() => loadPage(true), [loadPage]);
 
   return useMemo(
     () => ({
-      items: pipeline.pageItems,
-      sortedRows: pipeline.sorted,
-      total: pipeline.total,
-      totalPages: pipeline.totalPages,
-      safePage: pipeline.safePage,
+      items,
+      total,
+      totalPages,
+      safePage,
       kpis,
       dbCounts,
       loading,
@@ -171,11 +178,10 @@ export function useIssues(params: IssueQueryParams) {
       removeMany,
     }),
     [
-      pipeline.pageItems,
-      pipeline.sorted,
-      pipeline.total,
-      pipeline.totalPages,
-      pipeline.safePage,
+      items,
+      total,
+      totalPages,
+      safePage,
       kpis,
       dbCounts,
       loading,

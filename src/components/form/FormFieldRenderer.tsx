@@ -39,7 +39,6 @@ export function FormFieldRenderer({
           value={values[field.key] as string}
           onChange={set(field.key) as (v: string) => void}
           error={error}
-          hint={field.hint}
           required={field.required}
           autoComplete={field.autoComplete}
           placeholder={field.placeholder}
@@ -54,9 +53,9 @@ export function FormFieldRenderer({
           value={values[field.key] as string}
           onChange={set(field.key) as (v: string) => void}
           error={error}
-          hint={field.hint}
           required={field.required}
           className={field.className}
+          hideLabel={field.hideLabel}
         />
       );
 
@@ -71,7 +70,6 @@ export function FormFieldRenderer({
           onChange={set(field.key) as (v: string) => void}
           allowCustom={field.allowCustom ?? true}
           error={error}
-          hint={field.hint}
           required={field.required}
           placeholder={field.placeholder}
           className={field.className}
@@ -109,7 +107,6 @@ export function FormFieldRenderer({
           options={field.enumOptions ?? []}
           onChange={set(field.key) as (v: string) => void}
           error={error}
-          hint={field.hint}
           required={field.required}
           className={field.className}
         />
@@ -122,7 +119,6 @@ export function FormFieldRenderer({
           value={values[field.key] as number}
           onChange={set(field.key) as (v: number) => void}
           error={error}
-          hint={field.hint}
           required={field.required}
           className={field.className}
         />
@@ -135,7 +131,6 @@ export function FormFieldRenderer({
           value={values[field.key] as number | null}
           onChange={set(field.key) as (v: number | null) => void}
           error={error}
-          hint={field.hint}
           required={field.required}
           className={field.className}
         />

@@ -230,9 +230,12 @@ export default function AdminUsersPage() {
       </div>
 
       {error && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {error}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          <p className="min-w-0 flex-1">{error}</p>
+          <Button type="button" variant="secondary" disabled={loading || saving} onClick={() => void load()}>
+            Retry
+          </Button>
+        </div>
       )}
 
       {success && (
@@ -376,7 +379,21 @@ export default function AdminUsersPage() {
 
       <div className={dashboardPanel}>
         {loading ? (
-          <p className="text-sm text-gray-500">Loading users…</p>
+          <div className="space-y-2" role="status" aria-live="polite">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Loading users…</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Fetching accounts from the admin API.
+            </p>
+          </div>
+        ) : error && users.length === 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Could not load users. Use Retry above after checking production environment variables.
+            </p>
+            <Button type="button" variant="secondary" disabled={saving} onClick={() => void load()}>
+              Retry
+            </Button>
+          </div>
         ) : users.length === 0 ? (
           <p className="text-sm text-gray-500">No users found.</p>
         ) : (

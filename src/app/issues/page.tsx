@@ -11,6 +11,7 @@ import { defaultFilterState, toIssueQueryFilters, type IssuesFilterState } from 
 import { hasActiveIssueFilters } from "@/lib/issue-filters-utils";
 import { ISSUES_COLUMN_OPTIONS, ISSUES_TABLE_COLUMNS } from "@/config/issues-table-config";
 import { exportIssuesToCsv, copyIssueRowToClipboard } from "@/lib/issues/export-csv";
+import { fetchIssuesForExport } from "@/lib/issues-api";
 import { ISSUES_DEFAULT_PAGE_SIZE } from "@/lib/issues/pagination-config";
 import { dashboardBtnPrimary, dashboardPanel } from "@/components/issues/dashboard-ui";
 import { IssueKpiCards } from "@/components/IssueKpiCards";
@@ -50,7 +51,6 @@ export default function IssuesPage() {
 
   const {
     items,
-    sortedRows,
     total,
     safePage,
     kpis,
@@ -62,6 +62,8 @@ export default function IssuesPage() {
     remove,
     removeMany,
   } = useIssues(queryParams);
+
+  const [exporting, setExporting] = useState(false);
 
   const [modalMode, setModalMode] = useState<ModalMode>("closed");
   const [editingIssue, setEditingIssue] = useState<Issue | null>(null);
@@ -132,11 +134,23 @@ export default function IssuesPage() {
     [pushToast],
   );
 
-  const handleExportCsv = useCallback(() => {
-    if (sortedRows.length === 0) return;
-    exportIssuesToCsv(sortedRows, visibleExportColumns);
-    pushToast("success", `Exported ${sortedRows.length} rows`);
-  }, [sortedRows, visibleExportColumns, pushToast]);
+  const handleExportCsv = useCallback(async () => {
+    if (total === 0 || exporting) return;
+    setExporting(true);
+    try {
+      const rows = await fetchIssuesForExport(queryFilters, sort);
+      if (rows.length === 0) {
+        pushToast("error", "No rows to export");
+        return;
+      }
+      exportIssuesToCsv(rows, visibleExportColumns);
+      pushToast("success", `Exported ${rows.length.toLocaleString()} rows`);
+    } catch (e) {
+      pushToast("error", e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }, [total, exporting, queryFilters, sort, visibleExportColumns, pushToast]);
 
   const handleSave = useCallback(
     async (values: IssueCreateInput | IssueUpdateInput, editingId?: string) => {
@@ -227,7 +241,7 @@ export default function IssuesPage() {
           selectedCount={selectedIds.length}
           onBulkDelete={() => setBulkDeleteOpen(true)}
           hasActiveFilters={hasActiveIssueFilters(filters)}
-          exportDisabled={loading || sortedRows.length === 0}
+          exportDisabled={loading || exporting || total === 0}
           canDelete={isAdmin}
         />
 

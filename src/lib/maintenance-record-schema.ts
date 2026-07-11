@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { MaintenanceRecordFormValues } from "@/types/maintenance-record";
 import { coerceDbBoolean } from "@/lib/coerce-db-boolean";
-import { normalizeFormReplacementValue, type ReplacementChangeField } from "@/lib/replacements-value-mapper";
+import { isReplacementChangeRequired } from "@/lib/maintenance-form-patch";
 import {
   REPLACEMENT_MOTHERBOARD_OPTIONS,
   REPLACEMENT_SATA_CABLE_OPTIONS,
@@ -22,12 +22,6 @@ const nonNegativeInt = z.preprocess((value) => {
 }, z.number().int().min(0));
 
 const strictBoolean = z.preprocess((value) => coerceDbBoolean(value), z.boolean());
-
-const replacementChangeField = (field: ReplacementChangeField) =>
-  z.preprocess(
-    (value) => normalizeFormReplacementValue(value, field),
-    z.string().nullable(),
-  );
 
 export const maintenanceRecordFormSchema = z.object({
   vehicleNumber: z.string().trim().min(1, "Vehicle number is required"),
@@ -56,8 +50,8 @@ export const maintenanceRecordFormSchema = z.object({
   ssd: z.enum(REPLACEMENT_SSD_OPTIONS),
   motherboard: z.enum(REPLACEMENT_MOTHERBOARD_OPTIONS),
   sataCable: z.enum(REPLACEMENT_SATA_CABLE_OPTIONS),
-  imeiChanged: replacementChangeField("imei_changed"),
-  simChanged: replacementChangeField("sim_changed"),
+  imeiChanged: z.string().nullable(),
+  simChanged: z.string().nullable(),
   deviceChanged: strictBoolean,
   replacementsDescription: z.string(),
   issueType: z.string().trim().min(1, "Issue type is required"),
@@ -75,15 +69,19 @@ export function validateMaintenanceRecordForm(
   values: MaintenanceRecordFormValues,
 ): { success: true; data: MaintenanceRecordFormParsed } | { success: false; errors: Record<string, string> } {
   const result = maintenanceRecordFormSchema.safeParse(values);
-  if (result.success) {
+  const deviceChangeErrors = isReplacementChangeRequired(values);
+
+  if (result.success && Object.keys(deviceChangeErrors).length === 0) {
     return { success: true, data: result.data };
   }
 
-  const errors: Record<string, string> = {};
-  for (const issue of result.error.issues) {
-    const key = issue.path[0];
-    if (typeof key === "string" && !errors[key]) {
-      errors[key] = issue.message;
+  const errors: Record<string, string> = { ...deviceChangeErrors };
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      const key = issue.path[0];
+      if (typeof key === "string" && !errors[key]) {
+        errors[key] = issue.message;
+      }
     }
   }
   return { success: false, errors };

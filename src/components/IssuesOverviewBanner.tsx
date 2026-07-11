@@ -25,7 +25,7 @@ export function IssuesOverviewBanner({
     (filters.dateMode === "current_month" || filters.dateMode === "range") &&
     !loading &&
     total === 0 &&
-    (dbCounts?.issueRecords ?? 0) > 0;
+    active.length > 0;
 
   return (
     <div className={`${dashboardPanel} px-4 py-3 text-sm text-zinc-600 dark:text-zinc-400`}>
@@ -39,8 +39,8 @@ export function IssuesOverviewBanner({
             {dbCounts ? (
               <>
                 {" "}
-                · <span className="font-medium">{dbCounts.issueRecords}</span> issues in database ·{" "}
-                <span className="font-medium">{dbCounts.devices}</span> linked devices
+                · <span className="font-medium">{dbCounts.issueRecords.toLocaleString()}</span> in current
+                result set
               </>
             ) : null}
           </p>

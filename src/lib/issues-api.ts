@@ -1,5 +1,5 @@
 /**
- * Issue data access — single enriched Supabase query, DTO mapping, CRUD, realtime.
+ * Issue data access — server-paginated enriched queries, DTO mapping, CRUD, realtime.
  */
 
 import type {
@@ -9,82 +9,115 @@ import type {
   IssueListResult,
   IssueQueryFilters,
   IssueQueryParams,
+  IssueSort,
   IssueUpdateInput,
 } from "@/types/issue";
 import { getSupabaseClient } from "@/lib/supabase";
-import {
-  mapIssueFromRow,
-  type IssueRowWithRelations,
-} from "@/lib/issues-mapper";
+import { mapIssueFromRow, type IssueRowWithRelations } from "@/lib/issues-mapper";
 import { createMaintenanceRecord, updateMaintenanceRecord } from "@/lib/maintenance-record-api";
+import { computeTotalPages, clampPage } from "@/lib/issues/pipeline";
 import { logIssuesFetch } from "@/lib/issues-debug";
-import { runIssuePipeline } from "@/lib/issues/pipeline";
 import {
   applyIssueFilters,
+  applyIssueOrder,
+  buildIssuesSelect,
   CRITICAL_OR,
-  ISSUES_ENRICHED_SELECT,
+  ISSUES_FETCH_CHUNK,
+  ISSUES_MAX_EXPORT_ROWS,
 } from "@/lib/issues-query";
 
 export type IssuesDbCounts = {
+  /** Filtered issue count from the server (not loaded row count). */
   issueRecords: number;
-  devices: number;
 };
 
-const ENRICHED_FETCH_LIMIT = 10_000;
+export type IssuePageResult = IssueListResult & {
+  safePage: number;
+  totalPages: number;
+  dbCounts?: IssuesDbCounts;
+};
 
-/** One optimized query: issues + device + vehicle + status + hardware + storage + replacements. */
-export async function fetchEnrichedIssueDataset(
-  filters: IssueQueryFilters,
-): Promise<Issue[]> {
+/** Server-paginated enriched issues list with exact total count. */
+export async function fetchIssues(params: IssueQueryParams): Promise<IssuePageResult> {
   const supabase = getSupabaseClient();
+  const pageSize = Math.max(1, params.pageSize);
+  const select = buildIssuesSelect(params.filters);
 
-  let query = supabase
-    .from("issues")
-    .select(ISSUES_ENRICHED_SELECT)
-    .order("created_at", { ascending: false })
-    .limit(ENRICHED_FETCH_LIMIT);
+  const countQuery = applyIssueFilters(
+    supabase.from("issues").select("id", { count: "exact", head: true }),
+    params.filters,
+  );
+  const { count: totalCount, error: countError } = await countQuery;
+  if (countError) throw new Error(countError.message);
 
-  query = applyIssueFilters(query, filters);
+  const total = totalCount ?? 0;
+  const totalPages = computeTotalPages(total, pageSize);
+  const safePage = clampPage(params.page, totalPages);
+  const from = (safePage - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase.from("issues").select(select).range(from, to);
+
+  query = applyIssueFilters(query, params.filters);
+  query = applyIssueOrder(query, params.sort);
+  query = query.order("id", { ascending: params.sort.direction === "asc" });
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return ((data ?? []) as IssueRowWithRelations[]).map(mapIssueFromRow);
-}
-
-export async function fetchIssues(
-  params: IssueQueryParams,
-): Promise<IssueListResult & { dbCounts?: IssuesDbCounts; safePage: number }> {
-  const dataset = await fetchEnrichedIssueDataset(params.filters);
-  const pipeline = runIssuePipeline(
-    dataset,
-    params.filters,
-    params.sort,
-    params.page,
-    params.pageSize,
-  );
-
-  const deviceIds = new Set(dataset.map((r) => r.deviceId));
+  const items = ((data ?? []) as unknown as IssueRowWithRelations[]).map(mapIssueFromRow);
 
   logIssuesFetch({
-    source: "issues-enriched",
-    supabaseTotal: dataset.length,
-    afterClientFilters: pipeline.filtered.length,
-    page: pipeline.safePage,
-    pageSize: params.pageSize,
-    rowsReturned: pipeline.pageItems.length,
+    source: "issues-paginated",
+    supabaseTotal: total,
+    afterClientFilters: total,
+    page: safePage,
+    pageSize,
+    rowsReturned: items.length,
     activeFilters: describeActiveFilters(params.filters),
   });
 
   return {
-    items: pipeline.pageItems,
-    total: pipeline.total,
-    safePage: pipeline.safePage,
-    dbCounts: {
-      issueRecords: dataset.length,
-      devices: deviceIds.size,
-    },
+    items,
+    total,
+    safePage,
+    totalPages,
+    dbCounts: { issueRecords: total },
   };
+}
+
+/** Chunked server fetch for CSV export — never loads the full table into memory at once. */
+export async function fetchIssuesForExport(
+  filters: IssueQueryFilters,
+  sort: IssueSort,
+): Promise<Issue[]> {
+  const supabase = getSupabaseClient();
+  const select = buildIssuesSelect(filters);
+  const rows: Issue[] = [];
+  let offset = 0;
+
+  while (rows.length < ISSUES_MAX_EXPORT_ROWS) {
+    let query = supabase
+      .from("issues")
+      .select(select)
+      .range(offset, offset + ISSUES_FETCH_CHUNK - 1);
+
+    query = applyIssueFilters(query, filters);
+    query = applyIssueOrder(query, sort);
+    query = query.order("id", { ascending: sort.direction === "asc" });
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const batch = ((data ?? []) as unknown as IssueRowWithRelations[]).map(mapIssueFromRow);
+    if (batch.length === 0) break;
+
+    rows.push(...batch);
+    if (batch.length < ISSUES_FETCH_CHUNK) break;
+    offset += ISSUES_FETCH_CHUNK;
+  }
+
+  return rows;
 }
 
 function describeActiveFilters(filters: IssueQueryFilters): Record<string, string> {
@@ -92,6 +125,10 @@ function describeActiveFilters(filters: IssueQueryFilters): Record<string, strin
   if (filters.issueType) active.issueType = filters.issueType;
   if (filters.deviceImei) active.deviceImei = filters.deviceImei;
   if (filters.issueSource) active.issueSource = filters.issueSource;
+  if (filters.vehicleNumber) active.vehicleNumber = filters.vehicleNumber;
+  if (filters.flespiStatus) active.flespiStatus = filters.flespiStatus;
+  if (filters.screenStatus) active.screenStatus = filters.screenStatus;
+  if (filters.globalSearch) active.globalSearch = filters.globalSearch;
   if (filters.createdFrom) active.createdFrom = filters.createdFrom;
   if (filters.createdTo) active.createdTo = filters.createdTo;
   return active;
@@ -101,11 +138,11 @@ export async function fetchIssueKpis(filters: IssueQueryFilters): Promise<IssueK
   const supabase = getSupabaseClient();
 
   const totalQuery = applyIssueFilters(
-    supabase.from("issues").select("*", { count: "exact", head: true }),
+    supabase.from("issues").select("id", { count: "exact", head: true }),
     filters,
   );
   const criticalQuery = applyIssueFilters(
-    supabase.from("issues").select("*", { count: "exact", head: true }),
+    supabase.from("issues").select("id", { count: "exact", head: true }),
     filters,
   ).or(CRITICAL_OR);
 
@@ -147,16 +184,11 @@ export async function deleteIssue(id: string): Promise<void> {
   await deleteIssues([id]);
 }
 
-export function subscribeToIssues(onChange: () => void): () => void {
-  const supabase = getSupabaseClient();
-  const channel = supabase
-    .channel("issues-realtime")
-    .on("postgres_changes", { event: "*", schema: "public", table: "issues" }, () => {
-      onChange();
-    })
-    .subscribe();
+import { subscribeToIssueChanges, type IssueRealtimeEvent } from "@/lib/issues/issues-realtime";
 
-  return () => {
-    void supabase.removeChannel(channel);
-  };
+export type { IssueRealtimeEvent };
+
+/** @deprecated Use subscribeToIssueChanges from issues-realtime.ts */
+export function subscribeToIssues(onChange: () => void): () => void {
+  return subscribeToIssueChanges(() => onChange());
 }

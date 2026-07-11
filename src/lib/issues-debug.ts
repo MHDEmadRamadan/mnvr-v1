@@ -1,5 +1,5 @@
 export type IssuesFetchDebug = {
-  source: "issues-enriched" | "maintenance" | "issues";
+  source: "issues-paginated" | "issues-export" | "maintenance" | "issues";
   supabaseTotal: number;
   afterClientFilters: number;
   page: number;

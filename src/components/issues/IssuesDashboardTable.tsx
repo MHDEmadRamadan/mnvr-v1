@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { memo, useCallback } from "react";
 import type { RowSelectionState } from "@tanstack/react-table";
 import type { Issue } from "@/types/issue";
 import { DataTable } from "@/components/data-table/DataTable";
@@ -27,7 +27,7 @@ type IssuesDashboardTableProps = {
   canDelete?: boolean;
 };
 
-export function IssuesDashboardTable({
+export const IssuesDashboardTable = memo(function IssuesDashboardTable({
   items,
   loading,
   visibleKeys,
@@ -88,4 +88,4 @@ export function IssuesDashboardTable({
       emptyDescription="Adjust filters or create a new issue for a device."
     />
   );
-}
+});

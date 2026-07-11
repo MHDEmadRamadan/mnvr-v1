@@ -53,5 +53,6 @@ export async function resetUserPasswordAndInvalidateSessions(
 
 /** After role or disable changes — revoke every active session for the target user. */
 export async function invalidateSessionsAfterPermissionChange(userId: string): Promise<void> {
+  await bumpUserPermissionsVersion(userId);
   await invalidateAllUserSessions(userId);
 }
