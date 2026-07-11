@@ -6,9 +6,9 @@ Generated against `Issue` DTO (`src/types/issue.ts`) and table config (`src/conf
 
 | Metric | Count |
 |--------|------:|
-| DTO fields (total) | 33 |
+| DTO fields (total) | 32 |
 | Internal-only (never shown) | 2 |
-| Table column definitions | 31 |
+| Table column definitions | 30 |
 | Coverage | **100%** of displayable fields |
 
 All user-facing DTO fields are available in the column selector. No raw UUIDs or foreign keys are rendered in the table or view drawer.
@@ -42,7 +42,6 @@ All user-facing DTO fields are available in the column selector. No raw UUIDs or
 | `pmmIssue` | `pmmIssue` | Issue | ✓ |
 | `ssdIssue` | `ssdIssue` | Issue | ✓ |
 | `otherIssue` | `otherIssue` | Issue | |
-| `issueSource` | `issueSource` | Issue | ✓ |
 | `motherboardType` | `motherboardType` | Hardware | ✓ |
 | `pmmType` | `pmmType` | Hardware | |
 | `ssdType` | `ssdType` | Storage | ✓ |
