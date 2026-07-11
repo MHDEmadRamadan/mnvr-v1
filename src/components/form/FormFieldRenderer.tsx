@@ -26,6 +26,7 @@ export function FormFieldRenderer({
   getComboboxOptions,
 }: FormFieldRendererProps) {
   const error = errors[field.key];
+  const fieldKey = field.key;
   const set =
     <K extends keyof MaintenanceRecordFormValues>(key: K) =>
     (value: MaintenanceRecordFormValues[K]) =>
@@ -43,6 +44,7 @@ export function FormFieldRenderer({
           autoComplete={field.autoComplete}
           placeholder={field.placeholder}
           className={field.className}
+          fieldKey={fieldKey}
         />
       );
 
@@ -56,6 +58,7 @@ export function FormFieldRenderer({
           required={field.required}
           className={field.className}
           hideLabel={field.hideLabel}
+          fieldKey={fieldKey}
         />
       );
 
@@ -73,6 +76,7 @@ export function FormFieldRenderer({
           required={field.required}
           placeholder={field.placeholder}
           className={field.className}
+          fieldKey={fieldKey}
         />
       );
     }
@@ -83,7 +87,9 @@ export function FormFieldRenderer({
           label={field.label}
           checked={values[field.key] as boolean}
           onChange={set(field.key) as (v: boolean) => void}
+          error={error}
           className={field.className}
+          fieldKey={fieldKey}
         />
       );
 
@@ -96,6 +102,7 @@ export function FormFieldRenderer({
           placeholder={field.placeholder}
           error={error}
           className={field.className}
+          fieldKey={fieldKey}
         />
       );
 
@@ -109,6 +116,7 @@ export function FormFieldRenderer({
           error={error}
           required={field.required}
           className={field.className}
+          fieldKey={fieldKey}
         />
       );
 
@@ -121,6 +129,7 @@ export function FormFieldRenderer({
           error={error}
           required={field.required}
           className={field.className}
+          fieldKey={fieldKey}
         />
       );
 
@@ -133,6 +142,7 @@ export function FormFieldRenderer({
           error={error}
           required={field.required}
           className={field.className}
+          fieldKey={fieldKey}
         />
       );
 

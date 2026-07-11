@@ -4,7 +4,12 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AUTH_LOGOUT_MESSAGE_KEY } from "@/lib/auth-permissions";
+import { validateLoginFields } from "@/lib/auth-validation";
+import { TextField } from "@/components/form/TextField";
+import { useFormFieldErrors } from "@/hooks/useFormFieldErrors";
 import { Button } from "@/components/ui/button";
+
+const LOGIN_FIELD_ORDER = ["email", "password"] as const;
 
 function LoginForm() {
   const { signIn, loading: authLoading, isAuthenticated } = useAuth();
@@ -14,9 +19,11 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
+  const { errors, applyErrors, reconcileField, clearErrors } = useFormFieldErrors(LOGIN_FIELD_ORDER);
 
   useEffect(() => {
     try {
@@ -38,24 +45,25 @@ function LoginForm() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
+    setApiError(null);
+    clearErrors();
+
+    const fieldErrors = validateLoginFields(email, password);
+    if (Object.keys(fieldErrors).length > 0) {
+      setShowFieldErrors(true);
+      applyErrors(fieldErrors);
+      setSubmitting(false);
+      return;
+    }
+
     setSubmitting(true);
-
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password) {
-      setError("Email and password are required.");
-      setSubmitting(false);
-      return;
-    }
-
-    const result = await signIn(trimmedEmail, password);
+    const result = await signIn(email.trim(), password);
     if (result.error) {
-      setError(result.error);
+      setApiError(result.error);
       setSubmitting(false);
       return;
     }
 
-    // Navigation is handled by AuthGate once session + profile are ready.
     setSubmitting(false);
   }
 
@@ -72,48 +80,56 @@ function LoginForm() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-blue-500 focus:border-blue-500 focus:ring-2 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              disabled={submitting || authLoading}
-            />
-          </div>
+        <form onSubmit={onSubmit} className="space-y-4" noValidate>
+          <TextField
+            label="Email"
+            type="email"
+            fieldKey="email"
+            variant="auth"
+            required
+            value={email}
+            onChange={(value) => {
+              setEmail(value);
+              if (showFieldErrors) reconcileField("email", validateLoginFields(value, password));
+            }}
+            error={errors.email}
+            autoComplete="email"
+            disabled={submitting || authLoading}
+          />
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-blue-500 focus:border-blue-500 focus:ring-2 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              disabled={submitting || authLoading}
-            />
-          </div>
+          <TextField
+            label="Password"
+            type="password"
+            fieldKey="password"
+            variant="auth"
+            required
+            value={password}
+            onChange={(value) => {
+              setPassword(value);
+              if (showFieldErrors) reconcileField("password", validateLoginFields(email, value));
+            }}
+            error={errors.password}
+            autoComplete="current-password"
+            disabled={submitting || authLoading}
+          />
 
-          {notice && (
-            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+          {notice ? (
+            <p
+              className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+              role="status"
+            >
               {notice}
             </p>
-          )}
+          ) : null}
 
-          {error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-              {error}
+          {apiError ? (
+            <p
+              className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300"
+              role="alert"
+            >
+              {apiError}
             </p>
-          )}
+          ) : null}
 
           <Button type="submit" className="w-full" disabled={submitting || authLoading}>
             {submitting ? "Signing in…" : "Sign in"}

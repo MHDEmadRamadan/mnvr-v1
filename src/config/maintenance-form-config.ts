@@ -294,3 +294,12 @@ export function fieldsForSection(section: MaintenanceFormSectionId): Maintenance
 }
 
 export const COMBOBOX_FORM_FIELDS = MAINTENANCE_FORM_FIELDS.filter((f) => f.type === "combobox");
+
+/** Visible field keys in display order — used for focus-on-error. */
+export const MAINTENANCE_FORM_FIELD_ORDER = MAINTENANCE_FORM_FIELDS.filter((f) => !f.hidden).map(
+  (f) => f.key,
+);
+
+/** Map form field key → accordion section id. */
+export const MAINTENANCE_FIELD_SECTION_MAP: Record<string, MaintenanceFormSectionId> =
+  Object.fromEntries(MAINTENANCE_FORM_FIELDS.map((f) => [f.key, f.section]));

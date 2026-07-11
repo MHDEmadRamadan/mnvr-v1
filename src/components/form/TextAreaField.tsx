@@ -1,6 +1,8 @@
 "use client";
 
+import { useId } from "react";
 import { FieldShell, inputClass } from "@/components/form/FieldShell";
+import { fieldControlAriaProps } from "@/lib/form-validation";
 
 export function TextAreaField({
   label,
@@ -11,6 +13,7 @@ export function TextAreaField({
   className,
   rows = 3,
   hideLabel = false,
+  fieldKey,
 }: {
   label: string;
   value: string;
@@ -20,7 +23,10 @@ export function TextAreaField({
   className?: string;
   rows?: number;
   hideLabel?: boolean;
+  fieldKey?: string;
 }) {
+  const controlId = useId();
+
   return (
     <FieldShell
       label={label}
@@ -28,8 +34,16 @@ export function TextAreaField({
       required={required}
       className={className}
       hideLabel={hideLabel}
+      fieldKey={fieldKey}
+      controlId={controlId}
     >
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className={inputClass(error)} />
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        className={inputClass(error)}
+        {...fieldControlAriaProps(controlId, error)}
+      />
     </FieldShell>
   );
 }

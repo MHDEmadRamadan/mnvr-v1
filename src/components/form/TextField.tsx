@@ -1,6 +1,8 @@
 "use client";
 
-import { FieldShell, inputClass } from "@/components/form/FieldShell";
+import { useId } from "react";
+import { FieldShell, inputClass, type FieldShellVariant } from "@/components/form/FieldShell";
+import { fieldControlAriaProps } from "@/lib/form-validation";
 
 export function TextField({
   label,
@@ -12,6 +14,10 @@ export function TextField({
   autoComplete,
   placeholder,
   className,
+  fieldKey,
+  variant = "dashboard",
+  type = "text",
+  disabled,
 }: {
   label: string;
   value: string;
@@ -22,15 +28,33 @@ export function TextField({
   autoComplete?: string;
   placeholder?: string;
   className?: string;
+  fieldKey?: string;
+  variant?: FieldShellVariant;
+  type?: "text" | "email" | "password";
+  disabled?: boolean;
 }) {
+  const controlId = useId();
+
   return (
-    <FieldShell label={label} error={error} hint={hint} required={required} className={className}>
+    <FieldShell
+      label={label}
+      error={error}
+      hint={hint}
+      required={required}
+      className={className}
+      fieldKey={fieldKey}
+      controlId={controlId}
+      variant={variant}
+    >
       <input
+        type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete={autoComplete}
         placeholder={placeholder}
-        className={inputClass(error)}
+        disabled={disabled}
+        className={inputClass(error, variant)}
+        {...fieldControlAriaProps(controlId, error)}
       />
     </FieldShell>
   );

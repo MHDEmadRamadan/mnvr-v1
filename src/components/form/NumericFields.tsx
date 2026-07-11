@@ -1,6 +1,8 @@
 "use client";
 
+import { useId } from "react";
 import { FieldShell, inputClass } from "@/components/form/FieldShell";
+import { fieldControlAriaProps } from "@/lib/form-validation";
 
 export function IntField({
   label,
@@ -11,6 +13,7 @@ export function IntField({
   required,
   className,
   min = 0,
+  fieldKey,
 }: {
   label: string;
   value: number;
@@ -20,9 +23,20 @@ export function IntField({
   required?: boolean;
   className?: string;
   min?: number;
+  fieldKey?: string;
 }) {
+  const controlId = useId();
+
   return (
-    <FieldShell label={label} error={error} hint={hint} required={required} className={className}>
+    <FieldShell
+      label={label}
+      error={error}
+      hint={hint}
+      required={required}
+      className={className}
+      fieldKey={fieldKey}
+      controlId={controlId}
+    >
       <input
         type="number"
         step={1}
@@ -33,6 +47,7 @@ export function IntField({
           onChange(Number.isFinite(n) ? Math.max(min, n) : min);
         }}
         className={inputClass(error)}
+        {...fieldControlAriaProps(controlId, error)}
       />
     </FieldShell>
   );
@@ -46,6 +61,7 @@ export function FloatField({
   hint,
   required,
   className,
+  fieldKey,
 }: {
   label: string;
   value: number | null;
@@ -54,10 +70,21 @@ export function FloatField({
   hint?: string;
   required?: boolean;
   className?: string;
+  fieldKey?: string;
 }) {
+  const controlId = useId();
   const display = value === null ? "" : String(value);
+
   return (
-    <FieldShell label={label} error={error} hint={hint} required={required} className={className}>
+    <FieldShell
+      label={label}
+      error={error}
+      hint={hint}
+      required={required}
+      className={className}
+      fieldKey={fieldKey}
+      controlId={controlId}
+    >
       <input
         type="number"
         step="any"
@@ -72,6 +99,7 @@ export function FloatField({
           onChange(Number.isFinite(n) ? n : null);
         }}
         className={inputClass(error)}
+        {...fieldControlAriaProps(controlId, error)}
       />
     </FieldShell>
   );

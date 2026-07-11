@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { validatePasswordChange, validateNewPassword, validatePasswordStrength } from "./auth-validation";
+import { validatePasswordChange, validateNewPassword, validatePasswordStrength, validateLoginFields, validatePasswordChangeFields } from "./auth-validation";
 
 describe("validatePasswordChange", () => {
   it("requires current password", () => {
@@ -41,5 +41,21 @@ describe("validatePasswordStrength", () => {
 describe("validateNewPassword", () => {
   it("requires matching confirmation", () => {
     assert.equal(validateNewPassword("Passw0rd", "Different1"), "Passwords do not match.");
+  });
+});
+
+describe("validateLoginFields", () => {
+  it("maps missing credentials to field keys", () => {
+    assert.deepEqual(validateLoginFields("", ""), {
+      email: "Email is required.",
+      password: "Password is required.",
+    });
+  });
+});
+
+describe("validatePasswordChangeFields", () => {
+  it("maps mismatch to confirmPassword", () => {
+    const errors = validatePasswordChangeFields("oldpass1", "newpassword", "different");
+    assert.equal(errors.confirmPassword, "New passwords do not match.");
   });
 });

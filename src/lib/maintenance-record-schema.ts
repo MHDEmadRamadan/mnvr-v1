@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { MaintenanceRecordFormValues } from "@/types/maintenance-record";
 import { coerceDbBoolean } from "@/lib/coerce-db-boolean";
-import { isReplacementChangeRequired } from "@/lib/maintenance-form-patch";
+import { validateReplacementValueFields } from "@/lib/maintenance-form-patch";
 import {
   REPLACEMENT_MOTHERBOARD_OPTIONS,
   REPLACEMENT_SATA_CABLE_OPTIONS,
@@ -64,17 +64,11 @@ export const maintenanceRecordFormSchema = z.object({
 
 export type MaintenanceRecordFormParsed = z.infer<typeof maintenanceRecordFormSchema>;
 
-export function validateMaintenanceRecordForm(
-  values: MaintenanceRecordFormValues,
-): { success: true; data: MaintenanceRecordFormParsed } | { success: false; errors: Record<string, string> } {
+function collectMaintenanceRecordErrors(values: MaintenanceRecordFormValues): Record<string, string> {
   const result = maintenanceRecordFormSchema.safeParse(values);
-  const deviceChangeErrors = isReplacementChangeRequired(values);
+  const replacementErrors = validateReplacementValueFields(values);
+  const errors: Record<string, string> = { ...replacementErrors };
 
-  if (result.success && Object.keys(deviceChangeErrors).length === 0) {
-    return { success: true, data: result.data };
-  }
-
-  const errors: Record<string, string> = { ...deviceChangeErrors };
   if (!result.success) {
     for (const issue of result.error.issues) {
       const key = issue.path[0];
@@ -83,5 +77,32 @@ export function validateMaintenanceRecordForm(
       }
     }
   }
+
+  return errors;
+}
+
+export function validateMaintenanceRecordForm(
+  values: MaintenanceRecordFormValues,
+): { success: true; data: MaintenanceRecordFormParsed } | { success: false; errors: Record<string, string> } {
+  const errors = collectMaintenanceRecordErrors(values);
+  const result = maintenanceRecordFormSchema.safeParse(values);
+
+  if (result.success && Object.keys(errors).length === 0) {
+    return { success: true, data: result.data };
+  }
+
   return { success: false, errors };
+}
+
+/** Revalidate only the fields the user changed. */
+export function validateMaintenanceRecordFields(
+  values: MaintenanceRecordFormValues,
+  changedKeys: (keyof MaintenanceRecordFormValues)[],
+): Record<string, string> {
+  const allErrors = collectMaintenanceRecordErrors(values);
+  const errors: Record<string, string> = {};
+  for (const key of changedKeys) {
+    if (allErrors[key]) errors[key] = allErrors[key];
+  }
+  return errors;
 }

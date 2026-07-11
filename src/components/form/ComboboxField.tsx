@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import { createPortal } from "react-dom";
 import { filterComboboxOptions } from "@/lib/combobox-filter";
 import { FieldShell, inputClass } from "@/components/form/FieldShell";
+import { fieldControlAriaProps } from "@/lib/form-validation";
 
 type ComboboxFieldProps = {
   label: string;
@@ -17,6 +18,7 @@ type ComboboxFieldProps = {
   required?: boolean;
   placeholder?: string;
   className?: string;
+  fieldKey?: string;
 };
 
 /** Dropdown list z-index — above IssueModal (z-50) and accordion panels (overflow-hidden). */
@@ -34,7 +36,9 @@ export function ComboboxField({
   required,
   placeholder,
   className,
+  fieldKey,
 }: ComboboxFieldProps) {
+  const controlId = useId();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -158,7 +162,15 @@ export function ComboboxField({
       : null;
 
   return (
-    <FieldShell label={label} error={error} hint={hint} required={required} className={className}>
+    <FieldShell
+      label={label}
+      error={error}
+      hint={hint}
+      required={required}
+      className={className}
+      fieldKey={fieldKey}
+      controlId={controlId}
+    >
       <div ref={rootRef} className="relative">
         <input
           ref={inputRef}
@@ -169,6 +181,7 @@ export function ComboboxField({
           value={query}
           placeholder={placeholder ?? "Search or type…"}
           className={inputClass(error)}
+          {...fieldControlAriaProps(controlId, error)}
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQuery(e.target.value);

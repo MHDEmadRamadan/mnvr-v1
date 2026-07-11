@@ -1,6 +1,9 @@
 import type { MaintenanceRecordFormValues } from "@/types/maintenance-record";
 
-/** Check IMEI/SIM changed when the user enables device replacement (empty replacement values). */
+/**
+ * Apply a partial update to maintenance form state.
+ * One-way rule: turning Device Changed ON auto-enables IMEI/SIM when they are off.
+ */
 export function applyMaintenanceFormPatch(
   prev: MaintenanceRecordFormValues,
   patch: Partial<MaintenanceRecordFormValues>,
@@ -15,22 +18,16 @@ export function applyMaintenanceFormPatch(
   return next;
 }
 
-export function isReplacementChangeRequired(
-  values: Pick<MaintenanceRecordFormValues, "deviceChanged" | "imeiChanged" | "simChanged">,
+/** When IMEI/SIM changed is checked, require a non-empty replacement value. */
+export function validateReplacementValueFields(
+  values: Pick<MaintenanceRecordFormValues, "imeiChanged" | "simChanged">,
 ): { imeiChanged?: string; simChanged?: string } {
-  if (!values.deviceChanged) return {};
-
   const errors: { imeiChanged?: string; simChanged?: string } = {};
 
-  if (values.imeiChanged === null) {
-    errors.imeiChanged = "IMEI changed is required when device changed";
-  } else if (values.imeiChanged.trim() === "") {
+  if (values.imeiChanged !== null && values.imeiChanged.trim() === "") {
     errors.imeiChanged = "Enter the new IMEI";
   }
-
-  if (values.simChanged === null) {
-    errors.simChanged = "SIM changed is required when device changed";
-  } else if (values.simChanged.trim() === "") {
+  if (values.simChanged !== null && values.simChanged.trim() === "") {
     errors.simChanged = "Enter the new SIM";
   }
 

@@ -5,11 +5,9 @@ import {
   MAINTENANCE_FORM_SECTIONS,
   fieldsForSection,
 } from "@/config/maintenance-form-config";
-import {
-  applyMaintenanceFormPatch,
-  isReplacementChangeRequired,
-} from "@/lib/maintenance-form-patch";
+import { applyMaintenanceFormPatch, validateReplacementValueFields } from "@/lib/maintenance-form-patch";
 import { validateMaintenanceRecordForm } from "@/lib/maintenance-record-schema";
+import { maintenanceFormToRpcPayload } from "@/lib/issues-mapper";
 import { emptyMaintenanceRecordForm } from "@/types/maintenance-record";
 
 const HIDDEN_DESCRIPTION_KEYS = new Set([
@@ -20,6 +18,21 @@ const HIDDEN_DESCRIPTION_KEYS = new Set([
   "storageDescription",
   "replacementsDescription",
 ]);
+
+const BASE_REQUIRED = {
+  vehicleNumber: "V-100",
+  imei: "352625123456789",
+  issueType: "Hardware",
+} as const;
+
+const IMEI_VALUE = "352625123456790";
+const SIM_VALUE = "8944501234567890124";
+
+function validForm(
+  overrides: Partial<ReturnType<typeof emptyMaintenanceRecordForm>>,
+) {
+  return { ...emptyMaintenanceRecordForm(), ...BASE_REQUIRED, ...overrides };
+}
 
 describe("maintenance form sections", () => {
   it("only Issue Information has a section description", () => {
@@ -46,8 +59,8 @@ describe("maintenance form sections", () => {
   });
 });
 
-describe("device changed replacement automation", () => {
-  it("checks IMEI and SIM changed without auto-filling replacement values", () => {
+describe("applyMaintenanceFormPatch — device changed one-way trigger", () => {
+  it("auto-enables IMEI and SIM when device changed is turned on", () => {
     const prev = emptyMaintenanceRecordForm();
     const next = applyMaintenanceFormPatch(prev, { deviceChanged: true });
     assert.equal(next.deviceChanged, true);
@@ -55,75 +68,130 @@ describe("device changed replacement automation", () => {
     assert.equal(next.simChanged, "");
   });
 
-  it("does not overwrite existing replacement values when device changed was already true", () => {
+  it("does not overwrite existing IMEI/SIM values when device changed is turned on", () => {
     const prev = {
       ...emptyMaintenanceRecordForm(),
-      deviceChanged: true,
-      imeiChanged: "352625123456789",
-      simChanged: "8944501234567890123",
+      imeiChanged: IMEI_VALUE,
+      simChanged: null,
     };
     const next = applyMaintenanceFormPatch(prev, { deviceChanged: true });
-    assert.equal(next.imeiChanged, "352625123456789");
-    assert.equal(next.simChanged, "8944501234567890123");
+    assert.equal(next.imeiChanged, IMEI_VALUE);
+    assert.equal(next.simChanged, "");
   });
 
   it("does not clear IMEI/SIM when device changed is turned off", () => {
     const prev = {
       ...emptyMaintenanceRecordForm(),
       deviceChanged: true,
-      imeiChanged: "352625123456789",
-      simChanged: "8944501234567890123",
+      imeiChanged: IMEI_VALUE,
+      simChanged: SIM_VALUE,
     };
     const next = applyMaintenanceFormPatch(prev, { deviceChanged: false });
     assert.equal(next.deviceChanged, false);
-    assert.equal(next.imeiChanged, "352625123456789");
-    assert.equal(next.simChanged, "8944501234567890123");
+    assert.equal(next.imeiChanged, IMEI_VALUE);
+    assert.equal(next.simChanged, SIM_VALUE);
   });
 
-  it("requires checked IMEI/SIM with non-empty replacement values when device changed is true", () => {
-    const unchecked = isReplacementChangeRequired({
-      deviceChanged: true,
-      imeiChanged: null,
-      simChanged: null,
-    });
-    assert.ok(unchecked.imeiChanged);
-    assert.ok(unchecked.simChanged);
+  it("user can disable IMEI only after device changed auto-enabled both", () => {
+    let state = applyMaintenanceFormPatch(emptyMaintenanceRecordForm(), { deviceChanged: true });
+    assert.equal(state.imeiChanged, "");
+    assert.equal(state.simChanged, "");
 
-    const checkedEmpty = isReplacementChangeRequired({
-      deviceChanged: true,
-      imeiChanged: "",
-      simChanged: "",
-    });
-    assert.ok(checkedEmpty.imeiChanged);
-    assert.ok(checkedEmpty.simChanged);
+    state = applyMaintenanceFormPatch(state, { imeiChanged: null });
+    assert.equal(state.deviceChanged, true);
+    assert.equal(state.imeiChanged, null);
+    assert.equal(state.simChanged, "");
   });
 
-  it("blocks save when device changed is true and replacement values are empty", () => {
-    const result = validateMaintenanceRecordForm({
-      ...emptyMaintenanceRecordForm(),
-      vehicleNumber: "V-100",
-      imei: "352625123456789",
-      issueType: "Hardware",
-      deviceChanged: true,
-      imeiChanged: "",
-      simChanged: "",
-    });
-    assert.equal(result.success, false);
-    if (result.success) return;
-    assert.ok(result.errors.imeiChanged);
-    assert.ok(result.errors.simChanged);
+  it("user can disable SIM only after device changed auto-enabled both", () => {
+    let state = applyMaintenanceFormPatch(emptyMaintenanceRecordForm(), { deviceChanged: true });
+    state = applyMaintenanceFormPatch(state, { simChanged: null });
+    assert.equal(state.deviceChanged, true);
+    assert.equal(state.imeiChanged, "");
+    assert.equal(state.simChanged, null);
   });
 
-  it("allows save when device changed is true and replacement values are filled", () => {
-    const result = validateMaintenanceRecordForm({
-      ...emptyMaintenanceRecordForm(),
-      vehicleNumber: "V-100",
-      imei: "352625123456789",
-      issueType: "Hardware",
-      deviceChanged: true,
-      imeiChanged: "352625123456790",
-      simChanged: "8944501234567890124",
+  it("does not re-trigger auto-enable when device changed stays on", () => {
+    let state = applyMaintenanceFormPatch(emptyMaintenanceRecordForm(), { deviceChanged: true });
+    state = applyMaintenanceFormPatch(state, { imeiChanged: null, simChanged: null });
+    state = applyMaintenanceFormPatch(state, { deviceChanged: true });
+    assert.equal(state.imeiChanged, null);
+    assert.equal(state.simChanged, null);
+  });
+
+  it("only applies the patched keys for unrelated updates", () => {
+    const prev = emptyMaintenanceRecordForm();
+    const next = applyMaintenanceFormPatch(prev, { imeiChanged: IMEI_VALUE });
+    assert.equal(next.imeiChanged, IMEI_VALUE);
+    assert.equal(next.deviceChanged, false);
+    assert.equal(next.simChanged, null);
+  });
+});
+
+describe("validateReplacementValueFields", () => {
+  it("requires a value only when IMEI/SIM changed is checked but empty", () => {
+    assert.deepEqual(validateReplacementValueFields({ imeiChanged: null, simChanged: null }), {});
+    assert.deepEqual(
+      validateReplacementValueFields({ imeiChanged: IMEI_VALUE, simChanged: null }),
+      {},
+    );
+    assert.ok(validateReplacementValueFields({ imeiChanged: "", simChanged: null }).imeiChanged);
+    assert.ok(validateReplacementValueFields({ imeiChanged: null, simChanged: "" }).simChanged);
+  });
+});
+
+describe("replacement field combinations — device / IMEI / SIM independent", () => {
+  const combinations: {
+    name: string;
+    deviceChanged: boolean;
+    imeiChanged: string | null;
+    simChanged: string | null;
+  }[] = [
+    { name: "device off, no IMEI/SIM changes", deviceChanged: false, imeiChanged: null, simChanged: null },
+    { name: "device off, IMEI only", deviceChanged: false, imeiChanged: IMEI_VALUE, simChanged: null },
+    { name: "device off, SIM only", deviceChanged: false, imeiChanged: null, simChanged: SIM_VALUE },
+    { name: "device off, IMEI and SIM", deviceChanged: false, imeiChanged: IMEI_VALUE, simChanged: SIM_VALUE },
+    { name: "device on, IMEI only", deviceChanged: true, imeiChanged: IMEI_VALUE, simChanged: null },
+    { name: "device on, SIM only", deviceChanged: true, imeiChanged: null, simChanged: SIM_VALUE },
+    { name: "device on, IMEI and SIM", deviceChanged: true, imeiChanged: IMEI_VALUE, simChanged: SIM_VALUE },
+    { name: "device on, neither IMEI nor SIM", deviceChanged: true, imeiChanged: null, simChanged: null },
+  ];
+
+  for (const combo of combinations) {
+    it(`accepts save: ${combo.name}`, () => {
+      const result = validateMaintenanceRecordForm(
+        validForm({
+          deviceChanged: combo.deviceChanged,
+          imeiChanged: combo.imeiChanged,
+          simChanged: combo.simChanged,
+        }),
+      );
+      assert.equal(result.success, true, `expected valid: ${combo.name}`);
     });
-    assert.equal(result.success, true);
+
+    it(`maps RPC payload: ${combo.name}`, () => {
+      const payload = maintenanceFormToRpcPayload(
+        validForm({
+          deviceChanged: combo.deviceChanged,
+          imeiChanged: combo.imeiChanged,
+          simChanged: combo.simChanged,
+        }),
+      );
+      assert.equal(payload.device_changed, combo.deviceChanged);
+      assert.equal(payload.imei_changed, combo.imeiChanged ?? "false");
+      assert.equal(payload.sim_changed, combo.simChanged ?? "false");
+    });
+  }
+
+  it("blocks save when IMEI changed is checked but empty (independent of device changed)", () => {
+    for (const deviceChanged of [false, true]) {
+      const result = validateMaintenanceRecordForm(
+        validForm({ deviceChanged, imeiChanged: "", simChanged: null }),
+      );
+      assert.equal(result.success, false);
+      if (result.success) return;
+      assert.ok(result.errors.imeiChanged);
+      assert.equal(result.errors.simChanged, undefined);
+    }
   });
 });

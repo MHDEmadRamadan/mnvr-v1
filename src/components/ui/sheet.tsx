@@ -10,9 +10,11 @@ type SheetProps = {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Wider panel for detail views (e.g. issue drawer). */
+  wide?: boolean;
 };
 
-export function Sheet({ open, onClose, title, description, children, footer }: SheetProps) {
+export function Sheet({ open, onClose, title, description, children, footer, wide }: SheetProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -40,7 +42,10 @@ export function Sheet({ open, onClose, title, description, children, footer }: S
         role="dialog"
         aria-modal="true"
         aria-labelledby="sheet-title"
-        className="relative flex h-full w-full max-w-lg flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:max-w-xl"
+        className={[
+          "relative flex h-full w-full flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950",
+          wide ? "max-w-2xl" : "max-w-lg sm:max-w-xl",
+        ].join(" ")}
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-zinc-200 px-6 py-5 dark:border-zinc-800">
           <div>

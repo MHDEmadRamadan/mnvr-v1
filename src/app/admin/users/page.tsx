@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CreateUserInput, Profile, UserRole } from "@/types/auth";
 import { useAuth } from "@/contexts/AuthContext";
-import { validateNewPassword, validatePasswordStrength } from "@/lib/auth-validation";
+import {
+  validateCreateUserFields,
+  validateResetPasswordFields,
+} from "@/lib/auth-validation";
+import { TextField } from "@/components/form/TextField";
+import { EnumField } from "@/components/form/EnumField";
+import { useFormFieldErrors } from "@/hooks/useFormFieldErrors";
 import {
   createAdminUser,
   fetchAdminUsers,
@@ -23,6 +29,10 @@ type ConfirmAction =
   | { type: "disable"; user: Profile }
   | { type: "enable"; user: Profile };
 
+const CREATE_USER_FIELD_ORDER = ["email", "password"] as const;
+const RESET_PASSWORD_FIELD_ORDER = ["password", "confirmPassword"] as const;
+const USER_ROLES = ["user", "admin"] as const;
+
 export default function AdminUsersPage() {
   const { getAccessToken, isAdmin } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
@@ -31,6 +41,8 @@ export default function AdminUsersPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showCreateErrors, setShowCreateErrors] = useState(false);
+  const [showResetErrors, setShowResetErrors] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   /** Pending role shown in the select while the confirm dialog is open. */
   const [pendingRoleByUserId, setPendingRoleByUserId] = useState<Record<string, UserRole>>({});
@@ -46,6 +58,29 @@ export default function AdminUsersPage() {
     fullName: "",
     role: "user",
   });
+
+  const {
+    errors: createErrors,
+    applyErrors: applyCreateErrors,
+    reconcileField: reconcileCreateField,
+    clearErrors: clearCreateErrors,
+  } = useFormFieldErrors(CREATE_USER_FIELD_ORDER);
+
+  const {
+    errors: resetErrors,
+    applyErrors: applyResetErrors,
+    clearErrors: clearResetErrors,
+  } = useFormFieldErrors(RESET_PASSWORD_FIELD_ORDER);
+
+  function syncResetPasswordErrors(password = resetPassword, confirm = resetConfirm) {
+    if (!showResetErrors) return;
+    const fieldErrors = validateResetPasswordFields(password, confirm);
+    if (Object.keys(fieldErrors).length > 0) {
+      applyResetErrors(fieldErrors);
+    } else {
+      clearResetErrors();
+    }
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,17 +119,18 @@ export default function AdminUsersPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError(null);
     setSuccess(null);
+    clearCreateErrors();
 
-    const passwordError = validatePasswordStrength(form.password);
-    if (passwordError) {
-      setError(passwordError);
-      setSaving(false);
+    const fieldErrors = validateCreateUserFields(form.email, form.password);
+    if (Object.keys(fieldErrors).length > 0) {
+      setShowCreateErrors(true);
+      applyCreateErrors(fieldErrors);
       return;
     }
 
+    setSaving(true);
     try {
       await createAdminUser(getAccessToken, form);
       setForm({ email: "", password: "", fullName: "", role: "user" });
@@ -172,6 +208,8 @@ export default function AdminUsersPage() {
     setResetPassword("");
     setResetConfirm("");
     setResetStep("form");
+    clearResetErrors();
+    setShowResetErrors(false);
     setError(null);
     setSuccess(null);
   }
@@ -179,15 +217,18 @@ export default function AdminUsersPage() {
   async function submitResetPassword() {
     if (!resetTarget) return;
 
-    const validationError = validateNewPassword(resetPassword, resetConfirm);
-    if (validationError) {
-      setError(validationError);
+    setError(null);
+    clearResetErrors();
+
+    const fieldErrors = validateResetPasswordFields(resetPassword, resetConfirm);
+    if (Object.keys(fieldErrors).length > 0) {
+      setShowResetErrors(true);
+      applyResetErrors(fieldErrors);
       return;
     }
 
     if (resetStep === "form") {
       setResetStep("confirm");
-      setError(null);
       return;
     }
 
@@ -284,24 +325,34 @@ export default function AdminUsersPage() {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Set a new password. The user will be signed out on all devices immediately.
               </p>
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">New password</span>
-                <input
-                  type="password"
-                  value={resetPassword}
-                  onChange={(e) => setResetPassword(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-                />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">Confirm new password</span>
-                <input
-                  type="password"
-                  value={resetConfirm}
-                  onChange={(e) => setResetConfirm(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-                />
-              </label>
+              <TextField
+                label="New password"
+                type="password"
+                fieldKey="password"
+                variant="auth"
+                required
+                value={resetPassword}
+                onChange={(value) => {
+                  setResetPassword(value);
+                  syncResetPasswordErrors(value, resetConfirm);
+                }}
+                error={resetErrors.password}
+                disabled={saving}
+              />
+              <TextField
+                label="Confirm new password"
+                type="password"
+                fieldKey="confirmPassword"
+                variant="auth"
+                required
+                value={resetConfirm}
+                onChange={(value) => {
+                  setResetConfirm(value);
+                  syncResetPasswordErrors(resetPassword, value);
+                }}
+                error={resetErrors.confirmPassword}
+                disabled={saving}
+              />
             </>
           ) : (
             <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -328,47 +379,56 @@ export default function AdminUsersPage() {
       )}
 
       {showAdd && (
-        <form onSubmit={handleCreate} className={`${dashboardPanel} grid grid-cols-1 gap-4 md:grid-cols-2`}>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Full name</span>
-            <input
-              value={form.fullName}
-              onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Email</span>
-            <input
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Password</span>
-            <input
-              type="password"
-              required
-              minLength={8}
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Role</span>
-            <select
-              value={form.role}
-              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as UserRole }))}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 dark:border-gray-700 dark:bg-gray-950"
-            >
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
+        <form onSubmit={handleCreate} className={`${dashboardPanel} grid grid-cols-1 gap-4 md:grid-cols-2`} noValidate>
+          <TextField
+            label="Full name"
+            fieldKey="fullName"
+            variant="auth"
+            value={form.fullName}
+            onChange={(value) => setForm((f) => ({ ...f, fullName: value }))}
+            className="text-sm"
+          />
+          <TextField
+            label="Email"
+            type="email"
+            fieldKey="email"
+            variant="auth"
+            required
+            value={form.email}
+            onChange={(value) => {
+              setForm((f) => ({ ...f, email: value }));
+              if (showCreateErrors) {
+                reconcileCreateField("email", validateCreateUserFields(value, form.password));
+              }
+            }}
+            error={createErrors.email}
+            className="text-sm"
+          />
+          <TextField
+            label="Password"
+            type="password"
+            fieldKey="password"
+            variant="auth"
+            required
+            value={form.password}
+            onChange={(value) => {
+              setForm((f) => ({ ...f, password: value }));
+              if (showCreateErrors) {
+                reconcileCreateField("password", validateCreateUserFields(form.email, value));
+              }
+            }}
+            error={createErrors.password}
+            className="text-sm"
+          />
+          <EnumField
+            label="Role"
+            fieldKey="role"
+            variant="auth"
+            value={form.role}
+            options={USER_ROLES}
+            onChange={(value) => setForm((f) => ({ ...f, role: value }))}
+            className="text-sm"
+          />
           <div className="md:col-span-2">
             <Button type="submit" disabled={saving}>
               {saving ? "Creating…" : "Create user"}

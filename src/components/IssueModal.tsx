@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Issue, IssueCreateInput, IssueUpdateInput } from "@/types/issue";
 import { emptyMaintenanceRecordForm, type MaintenanceRecordFormValues } from "@/types/maintenance-record";
+import { MAINTENANCE_FORM_FIELD_ORDER } from "@/config/maintenance-form-config";
 import { issueToMaintenanceForm, issueToMaintenanceUpdate } from "@/lib/issues-mapper";
-import { validateMaintenanceRecordForm } from "@/lib/maintenance-record-schema";
+import {
+  validateMaintenanceRecordForm,
+  validateMaintenanceRecordFields,
+} from "@/lib/maintenance-record-schema";
 import { applyMaintenanceFormPatch } from "@/lib/maintenance-form-patch";
+import { getFirstErrorKey, reconcileFieldErrors } from "@/lib/form-validation";
 import { useFieldSuggestions } from "@/hooks/useFieldSuggestions";
 import { MaintenanceRecordForm } from "@/components/issues/MaintenanceRecordForm";
 import { dashboardBtnPrimary, dashboardBtnSecondary, dashboardPanel } from "@/components/issues/dashboard-ui";
@@ -24,6 +29,8 @@ export function IssueModal({
   const isEdit = !!issue;
   const [values, setValues] = useState<MaintenanceRecordFormValues>(emptyMaintenanceRecordForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [focusErrorKey, setFocusErrorKey] = useState<string | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const { getComboboxOptions, loading: suggestionsLoading, error: suggestionsError, refresh } =
@@ -34,6 +41,8 @@ export function IssueModal({
     /* eslint-disable react-hooks/set-state-in-effect -- reset form when modal opens */
     setValues(isEdit && issue ? issueToMaintenanceForm(issue) : emptyMaintenanceRecordForm());
     setErrors({});
+    setFocusErrorKey(null);
+    setSubmitAttempted(false);
     setSaveSuccess(false);
   }, [open, isEdit, issue]);
 
@@ -46,6 +55,22 @@ export function IssueModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose, open]);
 
+  const handleChange = useCallback((patch: Partial<MaintenanceRecordFormValues>) => {
+    setValues((prev) => {
+      const next = applyMaintenanceFormPatch(prev, patch);
+      if (submitAttempted) {
+        const changedKeys = Object.keys(patch) as (keyof MaintenanceRecordFormValues)[];
+        const fieldErrors = validateMaintenanceRecordFields(next, changedKeys);
+        setErrors((prevErrors) => reconcileFieldErrors(prevErrors, fieldErrors, changedKeys));
+      }
+      return next;
+    });
+  }, [submitAttempted]);
+
+  const handleFocusErrorHandled = useCallback(() => {
+    setFocusErrorKey(null);
+  }, []);
+
   if (!open) return null;
 
   const heading = isEdit ? "Edit Maintenance Record" : "Add Maintenance Record";
@@ -57,12 +82,15 @@ export function IssueModal({
   const submit = async () => {
     const validated = validateMaintenanceRecordForm(values);
     if (!validated.success) {
+      setSubmitAttempted(true);
       setErrors(validated.errors);
+      setFocusErrorKey(getFirstErrorKey(validated.errors, MAINTENANCE_FORM_FIELD_ORDER));
       return;
     }
 
     setSubmitting(true);
     setErrors({});
+    setFocusErrorKey(null);
     setSaveSuccess(false);
     try {
       if (isEdit && issue) {
@@ -70,9 +98,10 @@ export function IssueModal({
           const payload = issueToMaintenanceUpdate(issue, validated.data);
           await onSave(payload, issue.id);
         } catch (e) {
-          setErrors({
-            vehicleNumber: e instanceof Error ? e.message : "Invalid record identifiers — close and reopen this issue.",
-          });
+          const message =
+            e instanceof Error ? e.message : "Invalid record identifiers — close and reopen this issue.";
+          setErrors({ vehicleNumber: message });
+          setFocusErrorKey("vehicleNumber");
           return;
         }
       } else {
@@ -108,10 +137,12 @@ export function IssueModal({
             <MaintenanceRecordForm
               values={values}
               errors={errors}
-              onChange={(patch) => setValues((prev) => applyMaintenanceFormPatch(prev, patch))}
+              onChange={handleChange}
               getComboboxOptions={getComboboxOptions}
               suggestionsLoading={suggestionsLoading}
               suggestionsError={suggestionsError}
+              focusErrorKey={focusErrorKey}
+              onFocusErrorHandled={handleFocusErrorHandled}
             />
           </div>
 

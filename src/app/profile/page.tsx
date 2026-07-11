@@ -2,8 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { validatePasswordChange } from "@/lib/auth-validation";
+import { validatePasswordChangeFields } from "@/lib/auth-validation";
+import { TextField } from "@/components/form/TextField";
+import { useFormFieldErrors } from "@/hooks/useFormFieldErrors";
 import { Button } from "@/components/ui/button";
+
+const PASSWORD_FIELD_ORDER = ["currentPassword", "newPassword", "confirmPassword"] as const;
 
 export default function ProfilePage() {
   const { profile, changePassword } = useAuth();
@@ -11,18 +15,36 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
+  const { errors, applyErrors, clearErrors } = useFormFieldErrors(PASSWORD_FIELD_ORDER);
+
+  function syncPasswordErrors(
+    current = currentPassword,
+    newPwd = newPassword,
+    confirm = confirmPassword,
+  ) {
+    if (!showFieldErrors) return;
+    const fieldErrors = validatePasswordChangeFields(current, newPwd, confirm);
+    if (Object.keys(fieldErrors).length > 0) {
+      applyErrors(fieldErrors);
+    } else {
+      clearErrors();
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(null);
+    setApiError(null);
     setSuccess(null);
+    clearErrors();
 
-    const validationError = validatePasswordChange(currentPassword, newPassword, confirmPassword);
-    if (validationError) {
-      setError(validationError);
+    const fieldErrors = validatePasswordChangeFields(currentPassword, newPassword, confirmPassword);
+    if (Object.keys(fieldErrors).length > 0) {
+      setShowFieldErrors(true);
+      applyErrors(fieldErrors);
       return;
     }
 
@@ -31,7 +53,7 @@ export default function ProfilePage() {
     setSubmitting(false);
 
     if (result.error) {
-      setError(result.error);
+      setApiError(result.error);
       return;
     }
 
@@ -39,6 +61,19 @@ export default function ProfilePage() {
     setNewPassword("");
     setConfirmPassword("");
     setSuccess("Password updated successfully.");
+  }
+
+  function revalidate(changed: (typeof PASSWORD_FIELD_ORDER)[number], next: {
+    currentPassword?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }) {
+    syncPasswordErrors(
+      next.currentPassword ?? currentPassword,
+      next.newPassword ?? newPassword,
+      next.confirmPassword ?? confirmPassword,
+    );
+    void changed;
   }
 
   if (!profile) {
@@ -85,63 +120,72 @@ export default function ProfilePage() {
           Enter your current password to set a new one.
         </p>
 
-        <form onSubmit={onSubmit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="current-password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Current password
-            </label>
-            <input
-              id="current-password"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-blue-500 focus:border-blue-500 focus:ring-2 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              disabled={submitting}
-            />
-          </div>
+        <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
+          <TextField
+            label="Current password"
+            type="password"
+            fieldKey="currentPassword"
+            variant="auth"
+            required
+            value={currentPassword}
+            onChange={(value) => {
+              setCurrentPassword(value);
+              revalidate("currentPassword", { currentPassword: value });
+            }}
+            error={errors.currentPassword}
+            autoComplete="current-password"
+            disabled={submitting}
+          />
 
-          <div>
-            <label htmlFor="new-password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              New password
-            </label>
-            <input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-blue-500 focus:border-blue-500 focus:ring-2 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              disabled={submitting}
-            />
-          </div>
+          <TextField
+            label="New password"
+            type="password"
+            fieldKey="newPassword"
+            variant="auth"
+            required
+            value={newPassword}
+            onChange={(value) => {
+              setNewPassword(value);
+              revalidate("newPassword", { newPassword: value });
+            }}
+            error={errors.newPassword}
+            autoComplete="new-password"
+            disabled={submitting}
+          />
 
-          <div>
-            <label htmlFor="confirm-password" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Confirm new password
-            </label>
-            <input
-              id="confirm-password"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-blue-500 focus:ring-2 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
-              disabled={submitting}
-            />
-          </div>
+          <TextField
+            label="Confirm new password"
+            type="password"
+            fieldKey="confirmPassword"
+            variant="auth"
+            required
+            value={confirmPassword}
+            onChange={(value) => {
+              setConfirmPassword(value);
+              revalidate("confirmPassword", { confirmPassword: value });
+            }}
+            error={errors.confirmPassword}
+            autoComplete="new-password"
+            disabled={submitting}
+          />
 
-          {error && (
-            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-              {error}
+          {apiError ? (
+            <p
+              className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300"
+              role="alert"
+            >
+              {apiError}
             </p>
-          )}
+          ) : null}
 
-          {success && (
-            <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/40 dark:text-green-300">
+          {success ? (
+            <p
+              className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950/40 dark:text-green-300"
+              role="status"
+            >
               {success}
             </p>
-          )}
+          ) : null}
 
           <Button type="submit" disabled={submitting}>
             {submitting ? "Updating…" : "Update password"}
