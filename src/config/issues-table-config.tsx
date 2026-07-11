@@ -166,13 +166,6 @@ export const ISSUES_TABLE_GROUPS: DataTableColumnGroup<Issue>[] = [
         sortValue: (r) => r.otherIssue,
         render: (r) => text(r.otherIssue),
       },
-      {
-        id: "issueSource",
-        label: "Source",
-        className: "w-[100px]",
-        sortValue: (r) => r.issueSource,
-        render: (r) => text(r.issueSource),
-      },
     ],
   },
   {

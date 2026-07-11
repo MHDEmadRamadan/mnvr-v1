@@ -168,7 +168,6 @@ function buildFullTestForm() {
     deviceChanged: true,
     replacementsDescription: "Replaced SSD",
     issueType: "Hardware failure",
-    issueSource: "Field visit",
     motherboardIssue: "No boot",
     pmmIssue: "CAM V",
     ssdIssue: "Bad sectors",
@@ -250,7 +249,6 @@ export async function runUpdateFlowTest(
       imei: enriched.deviceImei ?? "",
       issueType: enriched.issueType,
       issueDescription: `Updated at ${new Date().toISOString()}`,
-      issueSource: "maintenance-record-test-update",
       motherboardIssue: "updated-mb-issue",
     };
 
@@ -269,15 +267,15 @@ export async function runUpdateFlowTest(
     if (!updatedRow) {
       throw new Error(`Updated issue ${enriched.id} not found in returned issues array`);
     }
-    if (updatedRow.issue_source !== modifiedForm.issueSource) {
-      throw new Error("Updated issue_source does not match payload");
+    if (updatedRow.description !== modifiedForm.issueDescription) {
+      throw new Error("Updated issue description does not match payload");
     }
 
     console.info("[maintenance:test:update] result summary", {
       device_id: updateResult.device_id,
       editedIssueId: enriched.id,
       issueCount: updateResult.issues.length,
-      updatedIssueSource: updatedRow.issue_source,
+      updatedDescription: updatedRow.description,
     });
 
     return testPass({

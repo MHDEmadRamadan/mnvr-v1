@@ -20,7 +20,6 @@ function rowToRecord(row: Issue): Record<string, string | number> {
     "PMM Issue": sanitizeText(row.pmmIssue),
     "SSD Issue": sanitizeText(row.ssdIssue),
     "Other Issue": sanitizeText(row.otherIssue),
-    Source: sanitizeText(row.issueSource),
     "Motherboard Type": sanitizeText(row.motherboardType),
     "PMM Type": sanitizeText(row.pmmType),
     "SSD Type": sanitizeText(row.ssdType),

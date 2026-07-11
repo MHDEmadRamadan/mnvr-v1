@@ -1,7 +1,6 @@
 export function hasActiveIssueFilters(state: {
   issueType: string;
   deviceImei: string;
-  issueSource: string;
   vehicleNumber: string;
   flespiStatus: string;
   screenStatus: string;
@@ -14,7 +13,6 @@ export function hasActiveIssueFilters(state: {
     !!state.globalSearch.trim() ||
     !!state.issueType.trim() ||
     !!state.deviceImei.trim() ||
-    !!state.issueSource.trim() ||
     !!state.vehicleNumber.trim() ||
     !!state.flespiStatus.trim() ||
     !!state.screenStatus.trim() ||

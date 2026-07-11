@@ -3,7 +3,6 @@ import type { IssueQueryFilters } from "@/types/issue";
 export type IssuesFilterState = {
   issueType: string;
   deviceImei: string;
-  issueSource: string;
   vehicleNumber: string;
   flespiStatus: string;
   screenStatus: string;
@@ -24,7 +23,6 @@ export function toIssueQueryFilters(state: IssuesFilterState): IssueQueryFilters
 
   if (state.issueType.trim()) filters.issueType = state.issueType.trim();
   if (state.deviceImei.trim()) filters.deviceImei = state.deviceImei.trim();
-  if (state.issueSource.trim()) filters.issueSource = state.issueSource.trim();
   if (state.vehicleNumber.trim()) filters.vehicleNumber = state.vehicleNumber.trim();
   if (state.flespiStatus.trim()) filters.flespiStatus = state.flespiStatus.trim();
   if (state.screenStatus.trim()) filters.screenStatus = state.screenStatus.trim();
@@ -51,7 +49,6 @@ export function defaultFilterState(): IssuesFilterState {
   return {
     issueType: "",
     deviceImei: "",
-    issueSource: "",
     vehicleNumber: "",
     flespiStatus: "",
     screenStatus: "",
@@ -70,7 +67,6 @@ export function describeFilterState(state: IssuesFilterState): string[] {
   if (state.vehicleNumber.trim()) parts.push(`Vehicle: ${state.vehicleNumber.trim()}`);
   if (state.flespiStatus.trim()) parts.push(`Flespi: ${state.flespiStatus.trim()}`);
   if (state.screenStatus.trim()) parts.push(`Screen: ${state.screenStatus.trim()}`);
-  if (state.issueSource.trim()) parts.push(`Source: ${state.issueSource.trim()}`);
   if (state.dateMode === "current_month") parts.push("Date: current month");
   if (state.dateMode === "range") {
     const range = [state.fromDate, state.toDate].filter(Boolean).join(" → ");

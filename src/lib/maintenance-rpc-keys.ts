@@ -37,7 +37,6 @@ export const MAINTENANCE_RPC_FORM_KEYS = [
   "ssd_issue",
   "other_issue",
   "issue_description",
-  "issue_source",
 ] as const;
 
 export const MAINTENANCE_RPC_UPDATE_ID_KEYS = [
@@ -96,7 +95,6 @@ export const CAMEL_TO_RPC_KEY: Record<string, string> = {
   ssdIssue: "ssd_issue",
   otherIssue: "other_issue",
   issueDescription: "issue_description",
-  issueSource: "issue_source",
   issueId: "issue_id",
   vehicleId: "vehicle_id",
   deviceId: "device_id",

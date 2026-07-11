@@ -177,7 +177,6 @@ export const SORT_COLUMN_MAP: Record<string, string> = {
   motherboardIssue: "motherboard_issue",
   pmmIssue: "pmm_issue",
   otherIssue: "other_issue",
-  issueSource: "issue_source",
   description: "description",
   createdAt: "created_at",
   editedAt: "edited_at",
@@ -198,7 +197,6 @@ export function buildGlobalSearchOr(query: string): string {
     `pmm_issue.ilike.${pattern}`,
     `ssd_issue.ilike.${pattern}`,
     `other_issue.ilike.${pattern}`,
-    `issue_source.ilike.${pattern}`,
     `description.ilike.${pattern}`,
     `device.imei.ilike.${pattern}`,
     `device.vehicle.vehicle_number.ilike.${pattern}`,
@@ -222,9 +220,6 @@ export function applyIssueFilters<T extends Record<string, any>>(query: T, filte
   }
   if (filters.deviceImei?.trim()) {
     q = q.ilike("device.imei", `%${escapeIlikePattern(filters.deviceImei.trim())}%`);
-  }
-  if (filters.issueSource?.trim()) {
-    q = q.ilike("issue_source", `%${escapeIlikePattern(filters.issueSource.trim())}%`);
   }
   if (filters.vehicleNumber?.trim()) {
     q = q.ilike(

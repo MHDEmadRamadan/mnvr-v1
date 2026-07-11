@@ -78,9 +78,6 @@ export function ReportsFiltersPanel({ value, onChange, onApply, onReset }: Props
           <FilterField label="Other issue">
             <input className={dashboardInput} value={value.otherIssue} onChange={(e) => set("otherIssue")(e.target.value)} />
           </FilterField>
-          <FilterField label="Issue source">
-            <input className={dashboardInput} value={value.issueSource} onChange={(e) => set("issueSource")(e.target.value)} />
-          </FilterField>
         </FilterSection>
 
         <FilterSection title="Hardware & storage">

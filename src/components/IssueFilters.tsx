@@ -87,16 +87,6 @@ export function IssueFilters({
           </label>
 
           <label className="block">
-            <div className="mb-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">Issue source</div>
-            <input
-              value={value.issueSource}
-              onChange={(e) => onChange({ ...value, issueSource: e.target.value })}
-              placeholder="e.g. monitoring"
-              className={dashboardInput}
-            />
-          </label>
-
-          <label className="block">
             <div className="mb-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">Date</div>
             <select
               value={value.dateMode}

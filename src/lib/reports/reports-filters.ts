@@ -9,7 +9,6 @@ export function defaultReportFilters(): ReportFilters {
     pmmIssue: "",
     ssdIssue: "",
     otherIssue: "",
-    issueSource: "",
     motherboardType: "",
     pmmType: "",
     ssdType: "",
@@ -64,7 +63,6 @@ export function reportFilterSummary(filters: ReportFilters): string[] {
   if (textActive(filters.pmmIssue)) parts.push(`PMM issue: ${filters.pmmIssue.trim()}`);
   if (textActive(filters.ssdIssue)) parts.push(`SSD issue: ${filters.ssdIssue.trim()}`);
   if (textActive(filters.otherIssue)) parts.push(`Other issue: ${filters.otherIssue.trim()}`);
-  if (textActive(filters.issueSource)) parts.push(`Source: ${filters.issueSource.trim()}`);
   if (textActive(filters.motherboardType)) parts.push(`Motherboard type: ${filters.motherboardType.trim()}`);
   if (textActive(filters.pmmType)) parts.push(`PMM type: ${filters.pmmType.trim()}`);
   if (textActive(filters.ssdType)) parts.push(`SSD type: ${filters.ssdType.trim()}`);

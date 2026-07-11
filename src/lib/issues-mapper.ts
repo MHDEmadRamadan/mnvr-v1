@@ -30,7 +30,6 @@ export type IssueRow = {
   ssd_issue: string | null;
   other_issue: string | null;
   description: string | null;
-  issue_source: string | null;
   created_at: string;
   status?: "open" | "resolved" | null;
   created_by?: string | null;
@@ -205,7 +204,6 @@ export function mapIssueFromRow(row: IssueRowWithRelations): Issue {
     ssdIssue: str(row.ssd_issue),
     otherIssue: str(row.other_issue),
     description: str(row.description),
-    issueSource: str(row.issue_source),
     createdAt: row.created_at,
     status: row.status === "resolved" ? "resolved" : "open",
     createdById: row.created_by ?? null,
@@ -289,7 +287,6 @@ export function issueToMaintenanceForm(issue: Issue): MaintenanceRecordFormValue
     ssdIssue: issue.ssdIssue ?? "",
     otherIssue: issue.otherIssue ?? "",
     issueDescription: issue.description ?? "",
-    issueSource: issue.issueSource ?? "",
   };
 }
 
@@ -355,7 +352,6 @@ export function maintenanceFormToRpcPayload(input: MaintenanceRecordCreateInput)
     ssd_issue: input.ssdIssue,
     other_issue: input.otherIssue,
     issue_description: input.issueDescription,
-    issue_source: input.issueSource,
   };
 }
 

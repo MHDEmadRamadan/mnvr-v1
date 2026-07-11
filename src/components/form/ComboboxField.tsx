@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { filterComboboxOptions } from "@/lib/combobox-filter";
 import { FieldShell, inputClass } from "@/components/form/FieldShell";
 
@@ -18,6 +19,9 @@ type ComboboxFieldProps = {
   className?: string;
 };
 
+/** Dropdown list z-index — above IssueModal (z-50) and accordion panels (overflow-hidden). */
+const LISTBOX_Z_INDEX = 200;
+
 export function ComboboxField({
   label,
   value,
@@ -33,9 +37,17 @@ export function ComboboxField({
 }: ComboboxFieldProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState(value);
   const [highlight, setHighlight] = useState(0);
+  const [listRect, setListRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setQuery(value);
@@ -44,6 +56,7 @@ export function ComboboxField({
   const filtered = filterComboboxOptions(options, query);
   const exactMatch = options.some((o) => o.toLowerCase() === query.trim().toLowerCase());
   const canCreate = allowCustom && query.trim() !== "" && !exactMatch;
+  const listItems = canCreate ? [...filtered, `__create__:${query.trim()}`] : filtered;
 
   const commit = useCallback(
     (next: string) => {
@@ -55,15 +68,38 @@ export function ComboboxField({
     [onChange, onCommit],
   );
 
+  const updateListPosition = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setListRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setListRect(null);
+      return;
+    }
+    updateListPosition();
+    const onReposition = () => updateListPosition();
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
+    return () => {
+      window.removeEventListener("scroll", onReposition, true);
+      window.removeEventListener("resize", onReposition);
+    };
+  }, [open, updateListPosition, query, listItems.length]);
+
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (listRef.current?.contains(target)) return;
+      setOpen(false);
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
-
-  const listItems = canCreate ? [...filtered, `__create__:${query.trim()}`] : filtered;
 
   function selectIndex(index: number) {
     const item = listItems[index];
@@ -75,10 +111,57 @@ export function ComboboxField({
     }
   }
 
+  const listbox =
+    open && listItems.length > 0 && listRect && mounted
+      ? createPortal(
+          <ul
+            ref={listRef}
+            id={listId}
+            role="listbox"
+            style={{
+              position: "fixed",
+              top: listRect.top,
+              left: listRect.left,
+              width: listRect.width,
+              zIndex: LISTBOX_Z_INDEX,
+            }}
+            className="max-h-52 overflow-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
+          >
+            {listItems.map((item, index) => {
+              const isCreate = item.startsWith("__create__:");
+              const labelText = isCreate ? `Add "${item.slice("__create__:".length)}"` : item;
+              return (
+                <li
+                  key={`${item}-${index}`}
+                  role="option"
+                  aria-selected={index === highlight}
+                  className={[
+                    "cursor-pointer px-3 py-2 text-sm",
+                    index === highlight
+                      ? "bg-blue-50 text-blue-900 dark:bg-blue-950/50 dark:text-blue-100"
+                      : "text-zinc-800 dark:text-zinc-200",
+                    isCreate ? "border-t border-zinc-100 font-medium dark:border-zinc-800" : "",
+                  ].join(" ")}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    selectIndex(index);
+                  }}
+                  onMouseEnter={() => setHighlight(index)}
+                >
+                  {labelText}
+                </li>
+              );
+            })}
+          </ul>,
+          document.body,
+        )
+      : null;
+
   return (
     <FieldShell label={label} error={error} hint={hint} required={required} className={className}>
       <div ref={rootRef} className="relative">
         <input
+          ref={inputRef}
           role="combobox"
           aria-expanded={open}
           aria-controls={listId}
@@ -113,40 +196,8 @@ export function ComboboxField({
             if (query.trim()) onCommit?.(query.trim());
           }}
         />
-        {open && listItems.length > 0 ? (
-          <ul
-            id={listId}
-            role="listbox"
-            className="absolute z-50 mt-1 max-h-52 w-full overflow-auto rounded-lg border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-950"
-          >
-            {listItems.map((item, index) => {
-              const isCreate = item.startsWith("__create__:");
-              const labelText = isCreate ? `Add "${item.slice("__create__:".length)}"` : item;
-              return (
-                <li
-                  key={`${item}-${index}`}
-                  role="option"
-                  aria-selected={index === highlight}
-                  className={[
-                    "cursor-pointer px-3 py-2 text-sm",
-                    index === highlight
-                      ? "bg-blue-50 text-blue-900 dark:bg-blue-950/50 dark:text-blue-100"
-                      : "text-zinc-800 dark:text-zinc-200",
-                    isCreate ? "border-t border-zinc-100 font-medium dark:border-zinc-800" : "",
-                  ].join(" ")}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    selectIndex(index);
-                  }}
-                  onMouseEnter={() => setHighlight(index)}
-                >
-                  {labelText}
-                </li>
-              );
-            })}
-          </ul>
-        ) : null}
       </div>
+      {listbox}
     </FieldShell>
   );
 }

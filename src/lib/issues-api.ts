@@ -124,7 +124,6 @@ function describeActiveFilters(filters: IssueQueryFilters): Record<string, strin
   const active: Record<string, string> = {};
   if (filters.issueType) active.issueType = filters.issueType;
   if (filters.deviceImei) active.deviceImei = filters.deviceImei;
-  if (filters.issueSource) active.issueSource = filters.issueSource;
   if (filters.vehicleNumber) active.vehicleNumber = filters.vehicleNumber;
   if (filters.flespiStatus) active.flespiStatus = filters.flespiStatus;
   if (filters.screenStatus) active.screenStatus = filters.screenStatus;

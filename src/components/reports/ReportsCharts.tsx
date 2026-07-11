@@ -15,9 +15,6 @@ export function ReportsCharts({ metrics, loading }: Props) {
       <ChartCard title="Issues by type" loading={loading}>
         <BreakdownBars items={metrics.byIssueType} />
       </ChartCard>
-      <ChartCard title="Issues by source" loading={loading}>
-        <BreakdownBars items={metrics.bySource} />
-      </ChartCard>
       <ChartCard title="By motherboard type" loading={loading}>
         <BreakdownBars items={metrics.byMotherboardType} />
       </ChartCard>

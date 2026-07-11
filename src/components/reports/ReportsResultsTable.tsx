@@ -32,8 +32,6 @@ function cellValue(row: Issue, colId: string): string {
       return sanitizeText(row.pmmIssue);
     case "ssdIssue":
       return sanitizeText(row.ssdIssue);
-    case "issueSource":
-      return sanitizeText(row.issueSource);
     case "motherboardType":
       return sanitizeText(row.motherboardType);
     case "pmmType":

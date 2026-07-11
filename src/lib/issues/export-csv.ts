@@ -33,8 +33,6 @@ function cellText(row: Issue, colId: string): string {
       return sanitizeText(row.ssdIssue);
     case "otherIssue":
       return sanitizeText(row.otherIssue);
-    case "issueSource":
-      return sanitizeText(row.issueSource);
     case "motherboardType":
       return sanitizeText(row.motherboardType);
     case "pmmType":
@@ -103,7 +101,6 @@ export function copyIssueRowToClipboard(row: Issue): string {
     `IMEI: ${sanitizeText(row.deviceImei)}`,
     `Tickets: ${sanitizeText(row.deviceTickets)}`,
     `Type: ${sanitizeText(row.issueType)}`,
-    `Source: ${sanitizeText(row.issueSource)}`,
     `Created: ${formatDisplayDate(row.createdAt)}`,
     `Description: ${sanitizeText(row.description)}`,
   ];

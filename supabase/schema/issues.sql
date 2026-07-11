@@ -134,7 +134,6 @@ create table if not exists public.issues (
   ssd_issue text not null default '',
   other_issue text not null default '',
   description text not null default '',
-  issue_source text not null default '',
   created_at timestamp not null default now()
 );
 
@@ -360,7 +359,7 @@ begin
 
   insert into public.issues (
     device_id, issue_type, motherboard_issue, pmm_issue, ssd_issue,
-    other_issue, description, issue_source
+    other_issue, description
   )
   values (
     v_device_id,
@@ -369,8 +368,7 @@ begin
     coalesce(p->>'pmm_issue', ''),
     coalesce(p->>'ssd_issue', ''),
     coalesce(p->>'other_issue', ''),
-    coalesce(p->>'issue_description', ''),
-    coalesce(p->>'issue_source', '')
+    coalesce(p->>'issue_description', '')
   );
 
   return jsonb_build_object(
@@ -531,8 +529,7 @@ begin
     pmm_issue = coalesce(p->>'pmm_issue', ''),
     ssd_issue = coalesce(p->>'ssd_issue', ''),
     other_issue = coalesce(p->>'other_issue', ''),
-    description = coalesce(p->>'issue_description', ''),
-    issue_source = coalesce(p->>'issue_source', '')
+    description = coalesce(p->>'issue_description', '')
   where id = v_issue_id;
 
   return jsonb_build_object(

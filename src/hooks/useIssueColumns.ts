@@ -18,7 +18,6 @@ export const DEFAULT_VISIBLE_COLUMNS = [
   "motherboardIssue",
   "pmmIssue",
   "ssdIssue",
-  "issueSource",
   "motherboardType",
   "ssdType",
   "diskHealth",

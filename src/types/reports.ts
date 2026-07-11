@@ -14,7 +14,6 @@ export type ReportFilters = {
   pmmIssue: string;
   ssdIssue: string;
   otherIssue: string;
-  issueSource: string;
   motherboardType: string;
   pmmType: string;
   ssdType: string;
@@ -60,7 +59,6 @@ export type ReportMetrics = {
   byMotherboardType: ReportBreakdownItem[];
   byPmmType: ReportBreakdownItem[];
   bySsdType: ReportBreakdownItem[];
-  bySource: ReportBreakdownItem[];
   topFailures: ReportBreakdownItem[];
   topReplacements: ReportBreakdownItem[];
   monthlyTrends: ReportBreakdownItem[];

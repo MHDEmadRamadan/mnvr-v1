@@ -93,7 +93,6 @@ export function computeReportMetrics(rows: Issue[]): ReportMetrics {
     byMotherboardType: countBy(rows, (r) => r.motherboardType).slice(0, TOP_N),
     byPmmType: countBy(rows, (r) => r.pmmType).slice(0, TOP_N),
     bySsdType: countBy(rows, (r) => r.ssdType).slice(0, TOP_N),
-    bySource: countBy(rows, (r) => r.issueSource).slice(0, TOP_N),
     topFailures: topFailures(rows),
     topReplacements: topReplacements(rows),
     monthlyTrends,

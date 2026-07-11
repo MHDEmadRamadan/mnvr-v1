@@ -179,7 +179,6 @@ export function IssueViewDrawer({ open, issue, onClose, onEdit }: IssueViewDrawe
               <StatusPill value={issue.issueType} variant="issue" />
             )}
           </Field>
-          <TextField label="Source" value={issue.issueSource} />
           <TextField label="Motherboard Issue" value={issue.motherboardIssue} />
           <TextField label="PMM Issue" value={issue.pmmIssue} />
           <TextField label="SSD Issue" value={issue.ssdIssue} />

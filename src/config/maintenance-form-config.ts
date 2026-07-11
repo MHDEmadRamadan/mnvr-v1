@@ -249,14 +249,6 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
     required: true,
   },
   {
-    key: "issueSource",
-    label: "Issue source",
-    type: "combobox",
-    section: "issue",
-    suggestionField: "issue_source",
-    allowCustom: true,
-  },
-  {
     key: "motherboardIssue",
     label: "Motherboard issue",
     type: "combobox",
@@ -290,11 +282,10 @@ export const MAINTENANCE_FORM_FIELDS: MaintenanceFormFieldConfig[] = [
   },
   {
     key: "issueDescription",
-    label: "Issue description",
+    label: "Description",
     type: "textarea",
     section: "issue",
     className: "md:col-span-2",
-    hideLabel: true,
   },
 ];
 

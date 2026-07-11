@@ -25,7 +25,6 @@ const SORT_ACCESSORS: Record<string, (row: Issue) => string | number | boolean |
   pmmIssue: (r) => r.pmmIssue,
   ssdIssue: (r) => r.ssdIssue,
   otherIssue: (r) => r.otherIssue,
-  issueSource: (r) => r.issueSource,
   motherboardType: (r) => r.motherboardType ?? "",
   pmmType: (r) => r.pmmType ?? "",
   ssdType: (r) => r.ssdType ?? "",
@@ -75,10 +74,6 @@ export function refineIssueRows(rows: Issue[], filters: IssueQueryFilters): Issu
     if (filters.issueType?.trim()) {
       const q = filters.issueType.trim().toLowerCase();
       if (!row.issueType.toLowerCase().includes(q)) return false;
-    }
-    if (filters.issueSource?.trim()) {
-      const q = filters.issueSource.trim().toLowerCase();
-      if (!row.issueSource.toLowerCase().includes(q)) return false;
     }
     if (filters.deviceImei?.trim()) {
       const q = filters.deviceImei.trim().toLowerCase();

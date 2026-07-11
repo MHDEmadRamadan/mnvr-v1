@@ -8,7 +8,6 @@ export type MaintenanceRpcIssueRow = {
   ssd_issue: string | null;
   other_issue: string | null;
   description: string | null;
-  issue_source: string | null;
   created_at: string;
 };
 

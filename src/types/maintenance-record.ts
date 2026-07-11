@@ -54,7 +54,6 @@ export type MaintenanceRecordFormValues = {
   ssdIssue: string;
   otherIssue: string;
   issueDescription: string;
-  issueSource: string;
 };
 
 /** Relation IDs required for updating an existing maintenance record — UUID strings only. */
@@ -110,6 +109,5 @@ export function emptyMaintenanceRecordForm(): MaintenanceRecordFormValues {
     ssdIssue: "",
     otherIssue: "",
     issueDescription: "",
-    issueSource: "",
   };
 }

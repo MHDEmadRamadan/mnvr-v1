@@ -14,7 +14,6 @@ const EMPTY_METRICS: ReportMetrics = {
   byMotherboardType: [],
   byPmmType: [],
   bySsdType: [],
-  bySource: [],
   topFailures: [],
   topReplacements: [],
   monthlyTrends: [],

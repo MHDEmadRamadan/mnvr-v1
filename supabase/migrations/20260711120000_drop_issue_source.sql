@@ -12,7 +12,9 @@
 begin;
 
 -- 1) View: drop issue_source from SELECT; all other columns unchanged.
-create or replace view public.issues_safe as
+drop view if exists public.issues_safe;
+
+create view public.issues_safe as
 select
   i.id,
   i.device_id,

@@ -25,7 +25,6 @@ export type Issue = {
   otherIssue: string;
   /** Issue table description */
   description: string;
-  issueSource: string;
   createdAt: string;
   /** Kept for DB column compatibility; not used as a workflow in the UI. */
   status?: IssueWorkflowStatus;
@@ -87,7 +86,6 @@ export type IssueUpdateInput = MaintenanceRecordUpdateInput;
 export type IssueQueryFilters = {
   issueType?: string;
   deviceImei?: string;
-  issueSource?: string;
   vehicleNumber?: string;
   flespiStatus?: string;
   screenStatus?: string;

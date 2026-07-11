@@ -37,11 +37,12 @@ describe("maintenance form sections", () => {
     }
   });
 
-  it("shows issue description textarea without a duplicate field label", () => {
+  it("shows issue description textarea with a visible field label", () => {
     const issueFields = fieldsForSection("issue");
     const issueDescription = issueFields.find((f) => f.key === "issueDescription");
     assert.ok(issueDescription);
-    assert.equal(issueDescription?.hideLabel, true);
+    assert.equal(issueDescription?.label, "Description");
+    assert.notEqual(issueDescription?.hideLabel, true);
   });
 });
 

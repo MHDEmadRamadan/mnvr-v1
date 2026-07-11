@@ -154,7 +154,6 @@ describe("issueToMaintenanceForm — edit load", () => {
       ssdIssue: "",
       otherIssue: "",
       description: "",
-      issueSource: "",
       createdAt: new Date().toISOString(),
       imeiChanged: true,
       simChanged: "SIM-99",
@@ -176,7 +175,6 @@ describe("issueToMaintenanceForm — edit load", () => {
       ssd_issue: "",
       other_issue: "",
       description: "",
-      issue_source: "",
       created_at: new Date().toISOString(),
       device: {
         id: "00000000-0000-4000-8000-000000000002",

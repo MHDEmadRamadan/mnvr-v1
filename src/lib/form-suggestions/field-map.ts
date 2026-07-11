@@ -11,7 +11,6 @@ export type FormSuggestionFieldName =
   | "pmm_type"
   | "ssd_type"
   | "issue_type"
-  | "issue_source"
   | "motherboard_issue"
   | "pmm_issue"
   | "ssd_issue"
@@ -31,7 +30,6 @@ export const FORM_SUGGESTION_FIELD_SOURCES: Record<FormSuggestionFieldName, Fiel
   pmm_type: { table: "hardware", column: "pmm_type" },
   ssd_type: { table: "storage", column: "ssd_type" },
   issue_type: { table: "issues", column: "issue_type" },
-  issue_source: { table: "issues", column: "issue_source" },
   motherboard_issue: { table: "issues", column: "motherboard_issue" },
   pmm_issue: { table: "issues", column: "pmm_issue" },
   ssd_issue: { table: "issues", column: "ssd_issue" },

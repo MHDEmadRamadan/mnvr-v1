@@ -60,7 +60,6 @@ export const maintenanceRecordFormSchema = z.object({
   ssdIssue: z.string(),
   otherIssue: z.string(),
   issueDescription: z.string(),
-  issueSource: z.string(),
 });
 
 export type MaintenanceRecordFormParsed = z.infer<typeof maintenanceRecordFormSchema>;

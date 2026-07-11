@@ -14,7 +14,6 @@ const SEARCH_KEYS: (keyof Issue)[] = [
   "pmmIssue",
   "ssdIssue",
   "otherIssue",
-  "issueSource",
   "motherboardType",
   "pmmType",
   "ssdType",

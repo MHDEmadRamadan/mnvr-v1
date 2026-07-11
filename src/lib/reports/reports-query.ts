@@ -140,7 +140,6 @@ export function applyReportFilters<T extends Record<string, any>>(query: T, filt
   if (textActive(filters.pmmIssue)) q = q.ilike("pmm_issue", `%${filters.pmmIssue.trim()}%`);
   if (textActive(filters.ssdIssue)) q = q.ilike("ssd_issue", `%${filters.ssdIssue.trim()}%`);
   if (textActive(filters.otherIssue)) q = q.ilike("other_issue", `%${filters.otherIssue.trim()}%`);
-  if (textActive(filters.issueSource)) q = q.ilike("issue_source", `%${filters.issueSource.trim()}%`);
 
   if (filters.createdFrom) q = q.gte("created_at", filters.createdFrom);
   if (filters.createdTo) q = q.lte("created_at", endOfDayIso(filters.createdTo));

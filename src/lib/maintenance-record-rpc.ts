@@ -278,7 +278,6 @@ function parseRpcIssueRow(raw: unknown, index: number): MaintenanceRpcIssueRow {
     ssd_issue: typeof raw.ssd_issue === "string" ? raw.ssd_issue : null,
     other_issue: typeof raw.other_issue === "string" ? raw.other_issue : null,
     description: typeof raw.description === "string" ? raw.description : null,
-    issue_source: typeof raw.issue_source === "string" ? raw.issue_source : null,
     created_at: typeof raw.created_at === "string" ? raw.created_at : String(raw.created_at ?? ""),
   };
 }
