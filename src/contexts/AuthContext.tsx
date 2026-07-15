@@ -16,9 +16,25 @@ import { isValidAccessToken } from "@/lib/auth-token";
 import {
   AUTH_LOGOUT_MESSAGE_KEY,
   AUTH_SYNC_CHANNEL,
+  type AuthSyncMessage,
   havePermissionsChanged,
   PERMISSION_POLL_INTERVAL_MS,
 } from "@/lib/auth-permissions";
+import {
+  AUTH_ACTIVITY_THROTTLE_MS,
+  AUTH_LAST_ACTIVITY_AT_KEY,
+  AUTH_SESSION_CHECK_INTERVAL_MS,
+  clearSessionPolicyStorage,
+  clearSupabaseAuthStorage,
+  evaluateSessionExpiry,
+  getSessionExpiryMessage,
+  markSessionActivity,
+  markSessionStarted,
+  readStoredTimestamp,
+  resolveLastActivityAt,
+  resolveSessionStartedAt,
+  type SessionExpiryReason,
+} from "@/lib/auth-session-policy";
 import { mapProfileRow, PROFILE_SELECT, type ProfileRow } from "@/lib/profile-mapper";
 import type { Profile } from "@/types/auth";
 
@@ -82,10 +98,10 @@ function storeLogoutMessage(message: string) {
   }
 }
 
-function broadcastForceLogout(message: string) {
+function broadcastAuthSync(message: AuthSyncMessage) {
   if (typeof BroadcastChannel === "undefined") return;
   const channel = new BroadcastChannel(AUTH_SYNC_CHANNEL);
-  channel.postMessage({ type: "FORCE_LOGOUT", message });
+  channel.postMessage(message);
   channel.close();
 }
 
@@ -100,7 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const activeUserIdRef = useRef<string | null>(null);
   const profileRequestIdRef = useRef(0);
   const profileRef = useRef<Profile | null>(null);
-  const forceLogoutRef = useRef<(message?: string) => Promise<void>>(async () => {});
+  const forceLogoutRef = useRef<
+    (message?: string, options?: { broadcast?: boolean }) => Promise<void>
+  >(async () => {});
+  const lastActivityWriteRef = useRef(0);
+  const loggingOutRef = useRef(false);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -116,11 +136,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const forceLogout = useCallback(
-    async (message?: string) => {
+    async (message?: string, options?: { broadcast?: boolean }) => {
+      if (loggingOutRef.current) return;
+      loggingOutRef.current = true;
+
       const logoutMessage =
         message ?? "Your session has ended. Please sign in again.";
       storeLogoutMessage(logoutMessage);
-      broadcastForceLogout(logoutMessage);
+
+      if (options?.broadcast !== false) {
+        broadcastAuthSync({ type: "FORCE_LOGOUT", message: logoutMessage });
+      }
+
+      clearSessionPolicyStorage();
       clearAuthState();
       setSessionReady(true);
 
@@ -130,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // ignore
       }
 
+      clearSupabaseAuthStorage();
       window.location.replace("/login");
     },
     [clearAuthState],
@@ -138,6 +167,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     forceLogoutRef.current = forceLogout;
   }, [forceLogout]);
+
+  const expireSession = useCallback((reason: SessionExpiryReason) => {
+    void forceLogoutRef.current(getSessionExpiryMessage(reason));
+  }, []);
+
+  const recordActivity = useCallback(
+    (nowMs = Date.now(), { broadcast = true }: { broadcast?: boolean } = {}) => {
+      if (!session?.user?.id || loggingOutRef.current) return;
+
+      if (nowMs - lastActivityWriteRef.current < AUTH_ACTIVITY_THROTTLE_MS) {
+        return;
+      }
+      lastActivityWriteRef.current = nowMs;
+      markSessionActivity(nowMs);
+
+      if (broadcast) {
+        broadcastAuthSync({ type: "ACTIVITY", at: nowMs });
+      }
+    },
+    [session?.user?.id],
+  );
 
   const applyFreshProfile = useCallback(
     (next: Profile, { allowUpgrade = false }: { allowUpgrade?: boolean } = {}) => {
@@ -171,7 +221,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profileRef.current = null;
         setProfileReady(true);
         setInitError(null);
+        if (event === "SIGNED_OUT") {
+          clearSessionPolicyStorage();
+        }
         return;
+      }
+
+      if (event === "SIGNED_IN") {
+        loggingOutRef.current = false;
+        markSessionStarted(Date.now());
+      } else if (event === "INITIAL_SESSION") {
+        resolveSessionStartedAt(nextSession.user.last_sign_in_at);
+        if (readStoredTimestamp(AUTH_LAST_ACTIVITY_AT_KEY) === null) {
+          markSessionActivity(Date.now());
+        }
       }
 
       if (activeUserIdRef.current !== nextSession.user.id) {
@@ -187,6 +250,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // Idle + max-lifetime enforcement (identical for admin and user).
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    resolveSessionStartedAt(session.user?.last_sign_in_at);
+    if (readStoredTimestamp(AUTH_LAST_ACTIVITY_AT_KEY) === null) {
+      markSessionActivity(Date.now());
+    }
+
+    const checkExpiry = () => {
+      const now = Date.now();
+      const startedAt = resolveSessionStartedAt(session.user?.last_sign_in_at, now);
+      const lastActivity = resolveLastActivityAt(now);
+      const reason = evaluateSessionExpiry(now, startedAt, lastActivity);
+      if (reason) expireSession(reason);
+    };
+
+    checkExpiry();
+    const intervalId = window.setInterval(checkExpiry, AUTH_SESSION_CHECK_INTERVAL_MS);
+
+    const onActivity = () => recordActivity();
+    const activityEvents: (keyof WindowEventMap)[] = [
+      "mousedown",
+      "mousemove",
+      "keydown",
+      "scroll",
+      "touchstart",
+      "click",
+      "wheel",
+    ];
+
+    for (const eventName of activityEvents) {
+      window.addEventListener(eventName, onActivity, { passive: true });
+    }
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        checkExpiry();
+        recordActivity();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      for (const eventName of activityEvents) {
+        window.removeEventListener(eventName, onActivity);
+      }
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [session?.user?.id, session?.user?.last_sign_in_at, recordActivity, expireSession]);
 
   // Initial + retry profile load.
   useEffect(() => {
@@ -314,14 +430,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [session?.user?.id, profileReady]);
 
-  // Multi-tab synchronization.
+  // Multi-tab synchronization (logout + activity).
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
 
     const channel = new BroadcastChannel(AUTH_SYNC_CHANNEL);
-    channel.onmessage = (event: MessageEvent<{ type?: string; message?: string }>) => {
-      if (event.data?.type === "FORCE_LOGOUT") {
-        void forceLogoutRef.current(event.data.message);
+    channel.onmessage = (event: MessageEvent<AuthSyncMessage>) => {
+      const data = event.data;
+      if (!data?.type) return;
+
+      if (data.type === "FORCE_LOGOUT") {
+        void forceLogoutRef.current(data.message, { broadcast: false });
+        return;
+      }
+
+      if (data.type === "ACTIVITY" && typeof data.at === "number") {
+        markSessionActivity(data.at);
+        lastActivityWriteRef.current = data.at;
       }
     };
 
@@ -365,9 +490,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     setInitError(null);
+    loggingOutRef.current = false;
     const supabase = getSupabaseClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
+    markSessionStarted(Date.now());
     return {};
   }, []);
 
@@ -397,12 +524,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const getAccessToken = useCallback(async () => {
+    recordActivity();
     const supabase = getSupabaseClient();
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token ?? null;
     if (!isValidAccessToken(token)) return null;
     return token;
-  }, []);
+  }, [recordActivity]);
 
   const userId = session?.user?.id ?? null;
   const needsProfile = sessionReady && userId !== null;

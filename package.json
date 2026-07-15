@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:maintenance-rpc": "tsx scripts/test-maintenance-rpc.ts",
-    "test": "tsx --test src/lib/coerce-db-boolean.test.ts src/lib/replacements-value-mapper.test.ts src/lib/maintenance-form-audit.test.ts src/lib/maintenance-form-patch.test.ts src/lib/form-suggestions/field-map.test.ts src/lib/form-validation.test.ts src/lib/auth-validation.test.ts src/lib/auth-lifecycle.test.ts src/lib/auth-permissions.test.ts src/lib/auth-token.test.ts src/lib/issues-issue-tracking.test.ts src/lib/supabase-admin.test.ts src/lib/issues-pagination.test.ts src/lib/issues-realtime.test.ts"
+    "test": "tsx --test src/lib/coerce-db-boolean.test.ts src/lib/replacements-value-mapper.test.ts src/lib/maintenance-form-audit.test.ts src/lib/maintenance-form-patch.test.ts src/lib/form-suggestions/field-map.test.ts src/lib/form-validation.test.ts src/lib/auth-validation.test.ts src/lib/auth-lifecycle.test.ts src/lib/auth-session-policy.test.ts src/lib/auth-permissions.test.ts src/lib/auth-token.test.ts src/lib/issues-issue-tracking.test.ts src/lib/supabase-admin.test.ts src/lib/issues-pagination.test.ts src/lib/issues-realtime.test.ts src/lib/issues/format-maintenance-record-clipboard.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",

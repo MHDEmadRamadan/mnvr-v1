@@ -95,14 +95,9 @@ export function exportIssuesToCsv(
   URL.revokeObjectURL(url);
 }
 
-export function copyIssueRowToClipboard(row: Issue): string {
-  const lines = [
-    `Vehicle: ${sanitizeText(row.vehicleNumber)}`,
-    `IMEI: ${sanitizeText(row.deviceImei)}`,
-    `Tickets: ${sanitizeText(row.deviceTickets)}`,
-    `Type: ${sanitizeText(row.issueType)}`,
-    `Created: ${formatDisplayDate(row.createdAt)}`,
-    `Description: ${sanitizeText(row.description)}`,
-  ];
-  return lines.join("\n");
-}
+/** @deprecated Prefer formatMaintenanceRecordForClipboard — kept for call-site compatibility. */
+export { formatMaintenanceRecordForClipboard as copyIssueRowToClipboard } from "@/lib/issues/format-maintenance-record-clipboard";
+export {
+  formatMaintenanceRecordForClipboard,
+  copyMaintenanceRecordToClipboard,
+} from "@/lib/issues/format-maintenance-record-clipboard";

@@ -53,7 +53,7 @@ export const IssuesDashboardTable = memo(function IssuesDashboardTable({
         <TableActionButton variant="secondary" onClick={() => onEdit(row)}>
           Edit
         </TableActionButton>
-        <TableActionButton variant="secondary" onClick={() => onCopy(row)} title="Copy row to clipboard">
+        <TableActionButton variant="secondary" onClick={() => onCopy(row)} title="Copy maintenance record to clipboard">
           Copy
         </TableActionButton>
         {canDelete ? (

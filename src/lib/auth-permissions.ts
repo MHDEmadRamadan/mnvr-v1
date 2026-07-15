@@ -13,3 +13,7 @@ export function havePermissionsChanged(previous: Profile | null, next: Profile):
 export const AUTH_SYNC_CHANNEL = "mnvr-auth-sync";
 export const AUTH_LOGOUT_MESSAGE_KEY = "auth_logout_message";
 export const PERMISSION_POLL_INTERVAL_MS = 15_000;
+
+export type AuthSyncMessage =
+  | { type: "FORCE_LOGOUT"; message: string }
+  | { type: "ACTIVITY"; at: number };

@@ -10,7 +10,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { defaultFilterState, toIssueQueryFilters, type IssuesFilterState } from "@/lib/issue-filters";
 import { hasActiveIssueFilters } from "@/lib/issue-filters-utils";
 import { ISSUES_COLUMN_OPTIONS, ISSUES_TABLE_COLUMNS } from "@/config/issues-table-config";
-import { exportIssuesToCsv, copyIssueRowToClipboard } from "@/lib/issues/export-csv";
+import { exportIssuesToCsv, copyMaintenanceRecordToClipboard } from "@/lib/issues/export-csv";
 import { fetchIssuesForExport } from "@/lib/issues-api";
 import { ISSUES_DEFAULT_PAGE_SIZE } from "@/lib/issues/pagination-config";
 import { dashboardBtnPrimary, dashboardPanel } from "@/components/issues/dashboard-ui";
@@ -125,10 +125,10 @@ export default function IssuesPage() {
   const handleCopyRow = useCallback(
     async (issue: Issue) => {
       try {
-        await navigator.clipboard.writeText(copyIssueRowToClipboard(issue));
-        pushToast("success", "Row copied to clipboard");
+        await copyMaintenanceRecordToClipboard(issue);
+        pushToast("success", "Maintenance record copied to clipboard.");
       } catch {
-        pushToast("error", "Could not copy row");
+        pushToast("error", "Could not copy maintenance record to clipboard.");
       }
     },
     [pushToast],
@@ -305,6 +305,7 @@ export default function IssuesPage() {
         issue={viewIssue}
         onClose={() => setViewIssue(null)}
         onEdit={openEdit}
+        onCopy={handleCopyRow}
       />
 
       <IssueModal

@@ -23,6 +23,7 @@ type IssueViewDrawerProps = {
   issue: Issue | null;
   onClose: () => void;
   onEdit?: (issue: Issue) => void;
+  onCopy?: (issue: Issue) => void;
 };
 
 function Field({
@@ -205,7 +206,7 @@ function IssueHeroHeader({ issue }: { issue: Issue }) {
   );
 }
 
-export function IssueViewDrawer({ open, issue, onClose, onEdit }: IssueViewDrawerProps) {
+export function IssueViewDrawer({ open, issue, onClose, onEdit, onCopy }: IssueViewDrawerProps) {
   if (!issue) return null;
 
   const subtitle = [issue.vehicleNumber, issue.deviceImei].filter(Boolean).join(" · ") || undefined;
@@ -222,6 +223,11 @@ export function IssueViewDrawer({ open, issue, onClose, onEdit }: IssueViewDrawe
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
+          {onCopy ? (
+            <Button variant="secondary" onClick={() => onCopy(issue)}>
+              Copy
+            </Button>
+          ) : null}
           {onEdit ? (
             <Button
               onClick={() => {
