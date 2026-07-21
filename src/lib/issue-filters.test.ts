@@ -19,6 +19,10 @@ import {
   issueQueryFiltersToRpcPayload,
   reportFiltersToIssueQueryFilters,
 } from "@/lib/issues/filter-rpc";
+import {
+  buildOrFilterClauses,
+  describeOrFilterExpression,
+} from "@/lib/issues/filter-combine";
 import { defaultReportFilters } from "@/lib/reports/reports-filters";
 
 describe("issue filter catalog", () => {
@@ -139,5 +143,98 @@ describe("global search coverage", () => {
     assert.ok(GLOBAL_SEARCH_FIELDS.includes("vehicle.vehicle_number"));
     assert.ok(GLOBAL_SEARCH_FIELDS.includes("hardware.pmm_type"));
     assert.ok(GLOBAL_SEARCH_FIELDS.includes("storage.ssd_type"));
+  });
+});
+
+describe("cross-field OR filter combination", () => {
+  it("Case 1: multi values inside SSD Issue are OR within the field", () => {
+    const expr = describeOrFilterExpression({
+      ssdIssue: ["A", "B"],
+    });
+    assert.equal(expr, "(ssdIssue=A OR ssdIssue=B)");
+    const clauses = buildOrFilterClauses({ ssdIssue: ["A", "B"] });
+    assert.equal(clauses.length, 1);
+    assert.deepEqual(clauses[0], { kind: "text", key: "ssdIssue", values: ["A", "B"] });
+  });
+
+  it("Case 2: SSD Issue A and PMM Issue B combine with OR across fields", () => {
+    const clauses = buildOrFilterClauses({
+      ssdIssue: "A",
+      pmmIssue: "B",
+    });
+    assert.equal(clauses.length, 2);
+    assert.deepEqual(
+      new Set(clauses.map((c) => (c.kind === "text" ? `${c.key}=${c.values.join("|")}` : ""))),
+      new Set(["ssdIssue=A", "pmmIssue=B"]),
+    );
+    assert.match(describeOrFilterExpression({ ssdIssue: "A", pmmIssue: "B" }), /ssdIssue=A/);
+    assert.match(describeOrFilterExpression({ ssdIssue: "A", pmmIssue: "B" }), /pmmIssue=B/);
+    assert.match(describeOrFilterExpression({ ssdIssue: "A", pmmIssue: "B" }), / OR /);
+  });
+
+  it("Case 3: Vehicle + SSD + PMM are all OR'd (not AND)", () => {
+    const expr = describeOrFilterExpression({
+      ssdIssue: "A",
+      pmmIssue: "B",
+      vehicleNumber: "123",
+    });
+    assert.match(expr, /ssdIssue=A/);
+    assert.match(expr, /pmmIssue=B/);
+    assert.match(expr, /vehicleNumber=123/);
+    assert.equal(expr.split(" OR ").length, 3);
+    const clauses = buildOrFilterClauses({
+      ssdIssue: "A",
+      pmmIssue: "B",
+      vehicleNumber: "123",
+    });
+    assert.equal(clauses.length, 3);
+  });
+
+  it("Case 4: unrelated filters Status / Vehicle / IMEI combine with OR", () => {
+    const expr = describeOrFilterExpression({
+      status: "open",
+      vehicleNumber: "123",
+      deviceImei: "456",
+    });
+    assert.match(expr, /status=open/);
+    assert.match(expr, /vehicleNumber=123/);
+    assert.match(expr, /deviceImei=456/);
+    assert.equal(expr.split(" OR ").length, 3);
+  });
+
+  it("Case 5: clearing filters resets state, URL params, and OR clauses", () => {
+    const dirty = {
+      ...defaultFilterState(),
+      status: "open",
+      ssdIssue: ["SSD Failure"],
+      pmmIssue: ["PMM Failure"],
+      vehicleNumber: ["123"],
+    };
+    assert.ok(countActiveFilters(dirty) > 0);
+    assert.ok(buildOrFilterClauses(toIssueQueryFilters(dirty)).length > 0);
+
+    const cleared = defaultFilterState();
+    assert.equal(countActiveFilters(cleared), 0);
+    assert.deepEqual(buildOrFilterClauses(toIssueQueryFilters(cleared)), []);
+    assert.equal(describeOrFilterExpression(toIssueQueryFilters(cleared)), "(no active filters)");
+
+    const params = mergeFiltersIntoParams(
+      new URLSearchParams("status=open&ssdIssue=SSD+Failure&view=compact"),
+      cleared,
+    );
+    assert.equal(params.get("status"), null);
+    assert.equal(params.get("ssdIssue"), null);
+    assert.equal(params.get("view"), "compact");
+    assert.deepEqual(parseFiltersFromParams(params), defaultFilterState());
+  });
+
+  it("omits empty filters so they do not create AND restrictions", () => {
+    const clauses = buildOrFilterClauses({
+      ssdIssue: "A",
+      pmmIssue: "",
+      motherboardIssue: [],
+      status: "   ",
+    });
+    assert.deepEqual(clauses, [{ kind: "text", key: "ssdIssue", values: ["A"] }]);
   });
 });

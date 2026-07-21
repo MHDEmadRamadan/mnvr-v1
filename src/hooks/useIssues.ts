@@ -26,8 +26,17 @@ function toErrorMessage(error: unknown): string {
 
 const EMPTY_KPIS: IssueKpis = { total: 0, open: 0, resolved: 0, critical: 0 };
 
-export function useIssues(params: IssueQueryParams) {
+export type UseIssuesOptions = {
+  /** Called when issues are known to have been deleted (local or realtime). */
+  onDeletedIds?: (ids: string[]) => void;
+};
+
+export function useIssues(params: IssueQueryParams, options?: UseIssuesOptions) {
   const { isAuthenticated } = useAuth();
+  const onDeletedIdsRef = useRef(options?.onDeletedIds);
+  useEffect(() => {
+    onDeletedIdsRef.current = options?.onDeletedIds;
+  }, [options?.onDeletedIds]);
   const [items, setItems] = useState<Issue[]>([]);
   const [total, setTotal] = useState(0);
   const [safePage, setSafePage] = useState(1);
@@ -125,7 +134,10 @@ export function useIssues(params: IssueQueryParams) {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    return subscribeToIssueChanges(() => {
+    return subscribeToIssueChanges((event, meta) => {
+      if (event === "DELETE" && meta?.id) {
+        onDeletedIdsRef.current?.([meta.id]);
+      }
       void loadPageRef.current(false);
     });
   }, [isAuthenticated]);
@@ -150,12 +162,14 @@ export function useIssues(params: IssueQueryParams) {
 
   const remove = useCallback(async (id: string) => {
     await apiDelete(id);
+    onDeletedIdsRef.current?.([id]);
     await loadPage(false);
   }, [loadPage]);
 
   const removeMany = useCallback(async (ids: string[]) => {
     if (ids.length === 0) return;
     await apiDeleteMany(ids);
+    onDeletedIdsRef.current?.(ids);
     await loadPage(false);
   }, [loadPage]);
 

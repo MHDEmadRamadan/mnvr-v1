@@ -75,7 +75,7 @@ export type IssueFilterFieldDef = {
   stateKeys: readonly string[];
 };
 
-/** State keys that hold string[] (multi-select OR within field). */
+/** State keys that hold string[] (multi-select OR within field; fields OR across filters). */
 export const MULTI_VALUE_FILTER_KEYS = [
   "vehicleNumber",
   "deviceImei",

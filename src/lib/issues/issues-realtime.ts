@@ -3,7 +3,15 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export type IssueRealtimeEvent = "INSERT" | "UPDATE" | "DELETE";
 
-export type IssueRealtimeListener = (event: IssueRealtimeEvent) => void;
+export type IssueRealtimeMeta = {
+  /** Present for DELETE when Postgres sends the old row. */
+  id?: string;
+};
+
+export type IssueRealtimeListener = (
+  event: IssueRealtimeEvent,
+  meta?: IssueRealtimeMeta,
+) => void;
 
 const ISSUES_CHANNEL_NAME = "issues-dashboard";
 const DEBOUNCE_MS = 300;
@@ -22,22 +30,34 @@ const state: IssuesRealtimeState = {
   pendingEvents: new Set(),
 };
 
+type PendingNotify = {
+  event: IssueRealtimeEvent;
+  meta?: IssueRealtimeMeta;
+};
+
+const pendingNotifies: PendingNotify[] = [];
+
 function flushPendingEvents(): void {
   state.debounceTimer = null;
-  if (state.pendingEvents.size === 0 || state.listeners.size === 0) return;
+  if (pendingNotifies.length === 0 || state.listeners.size === 0) {
+    state.pendingEvents.clear();
+    pendingNotifies.length = 0;
+    return;
+  }
 
-  const events = [...state.pendingEvents];
+  const batch = pendingNotifies.splice(0, pendingNotifies.length);
   state.pendingEvents.clear();
 
   for (const listener of state.listeners) {
-    for (const event of events) {
-      listener(event);
+    for (const item of batch) {
+      listener(item.event, item.meta);
     }
   }
 }
 
-function scheduleNotify(event: IssueRealtimeEvent): void {
+function scheduleNotify(event: IssueRealtimeEvent, meta?: IssueRealtimeMeta): void {
   state.pendingEvents.add(event);
+  pendingNotifies.push({ event, meta });
   if (state.debounceTimer !== null) return;
   state.debounceTimer = setTimeout(flushPendingEvents, DEBOUNCE_MS);
 }
@@ -62,7 +82,13 @@ function attachChannel(): void {
     .on(
       "postgres_changes",
       { event: "DELETE", schema: "public", table: "issues" },
-      () => scheduleNotify("DELETE"),
+      (payload) => {
+        const id =
+          payload.old && typeof payload.old === "object" && "id" in payload.old
+            ? String((payload.old as { id: unknown }).id)
+            : undefined;
+        scheduleNotify("DELETE", id ? { id } : undefined);
+      },
     )
     .subscribe();
 
@@ -75,6 +101,7 @@ function detachChannel(): void {
     state.debounceTimer = null;
   }
   state.pendingEvents.clear();
+  pendingNotifies.length = 0;
 
   if (!state.channel) return;
 

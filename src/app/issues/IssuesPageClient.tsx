@@ -78,6 +78,21 @@ export default function IssuesPageClient() {
   const [sort, setSort] = useState<SortState>({ key: "createdAt", direction: "desc" });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
+  const deselectIds = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setRowSelection((prev) => {
+      let changed = false;
+      const next: RowSelectionState = { ...prev };
+      for (const id of ids) {
+        if (next[id]) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
   const columnKeys = useMemo(() => ISSUES_TABLE_COLUMNS.map((c) => c.id), []);
   const { visibleKeys, visibilityKey, toggleColumn, resetColumns, showAllColumns, hideAllColumns, isLocked } =
     useIssueColumns(columnKeys);
@@ -101,7 +116,7 @@ export default function IssuesPageClient() {
     update,
     remove,
     removeMany,
-  } = useIssues(queryParams);
+  } = useIssues(queryParams, { onDeletedIds: deselectIds });
 
   const [exporting, setExporting] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("closed");
@@ -223,10 +238,10 @@ export default function IssuesPageClient() {
 
   const handleConfirmBulkDelete = useCallback(async () => {
     try {
-      await removeMany(selectedIds);
-      pushToast("success", `Deleted ${selectedIds.length} issues`);
+      const ids = [...selectedIds];
+      await removeMany(ids);
+      pushToast("success", `Deleted ${ids.length} issues`);
       setBulkDeleteOpen(false);
-      setRowSelection({});
       if (safePage > 1) setPage(safePage);
     } catch (e) {
       pushToast("error", e instanceof Error ? e.message : "Bulk delete failed");
