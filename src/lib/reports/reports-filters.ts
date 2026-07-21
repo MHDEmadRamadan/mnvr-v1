@@ -81,24 +81,3 @@ export function reportFilterSummary(filters: ReportFilters): string[] {
   if (filters.createdTo) parts.push(`To: ${filters.createdTo}`);
   return parts;
 }
-
-export function needsDeviceInnerJoin(filters: ReportFilters): boolean {
-  return (
-    textActive(filters.deviceImei) ||
-    textActive(filters.vehicleNumber) ||
-    textActive(filters.motherboardType) ||
-    textActive(filters.pmmType) ||
-    textActive(filters.ssdType) ||
-    textActive(filters.softwareVersion) ||
-    textActive(filters.flespiStatus) ||
-    textActive(filters.screenStatus) ||
-    textActive(filters.dotmatrixStatus) ||
-    boolFilterActive(filters.sshStatus) ||
-    textActive(filters.ssd) ||
-    textActive(filters.motherboard) ||
-    textActive(filters.sataCable) ||
-    textActive(filters.imeiChanged) ||
-    textActive(filters.simChanged) ||
-    boolFilterActive(filters.deviceChanged)
-  );
-}

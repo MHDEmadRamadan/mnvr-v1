@@ -604,3 +604,13 @@ grant execute on function public.delete_maintenance_records(uuid[]) to anon, aut
 
 -- Realtime (enable in Supabase Dashboard → Database → Replication if needed)
 alter publication supabase_realtime add table public.issues;
+
+-- ---------------------------------------------------------------------------
+-- Auth, filters, and later RPCs live in supabase/migrations/ (apply after this
+-- file for local bootstrap). Critical follow-ups include:
+--   - profiles + authenticated RLS
+--   - issues.created_by / resolved_by / status / edited_at
+--   - page_filtered_issues / count_filtered_issues / text_filter_matches
+--   - trg_issues_touch_edited_at (keeps edited_at / Edited by accurate)
+-- Do not treat this file alone as a complete production schema.
+-- ---------------------------------------------------------------------------

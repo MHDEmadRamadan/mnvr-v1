@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { AUTH_LOGOUT_MESSAGE_KEY } from "@/lib/auth-permissions";
@@ -11,6 +11,21 @@ import { Button } from "@/components/ui/button";
 
 const LOGIN_FIELD_ORDER = ["email", "password"] as const;
 
+let logoutNoticeCache: string | null | undefined;
+
+function readLogoutNoticeClient(): string | null {
+  if (logoutNoticeCache !== undefined) return logoutNoticeCache;
+  try {
+    const message = sessionStorage.getItem(AUTH_LOGOUT_MESSAGE_KEY);
+    if (message) sessionStorage.removeItem(AUTH_LOGOUT_MESSAGE_KEY);
+    logoutNoticeCache = message;
+    return message;
+  } catch {
+    logoutNoticeCache = null;
+    return null;
+  }
+}
+
 function LoginForm() {
   const { signIn, loading: authLoading, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -20,22 +35,14 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const notice = useSyncExternalStore(
+    () => () => {},
+    readLogoutNoticeClient,
+    () => null,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [showFieldErrors, setShowFieldErrors] = useState(false);
   const { errors, applyErrors, reconcileField, clearErrors } = useFormFieldErrors(LOGIN_FIELD_ORDER);
-
-  useEffect(() => {
-    try {
-      const message = sessionStorage.getItem(AUTH_LOGOUT_MESSAGE_KEY);
-      if (message) {
-        setNotice(message);
-        sessionStorage.removeItem(AUTH_LOGOUT_MESSAGE_KEY);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {

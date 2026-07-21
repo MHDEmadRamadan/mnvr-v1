@@ -95,8 +95,6 @@ export function exportIssuesToCsv(
   URL.revokeObjectURL(url);
 }
 
-/** @deprecated Prefer formatMaintenanceRecordForClipboard — kept for call-site compatibility. */
-export { formatMaintenanceRecordForClipboard as copyIssueRowToClipboard } from "@/lib/issues/format-maintenance-record-clipboard";
 export {
   formatMaintenanceRecordForClipboard,
   copyMaintenanceRecordToClipboard,

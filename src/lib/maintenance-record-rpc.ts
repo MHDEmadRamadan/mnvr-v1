@@ -304,12 +304,14 @@ export function parseMaintenanceRpcResult(data: unknown, operation: string): Mai
 
   const issues = data.issues.map((row, index) => parseRpcIssueRow(row, index));
 
-  console.info("[maintenance:rpc:result]", {
-    operation,
-    device_id,
-    issueCount: issues.length,
-    issueIds: issues.map((i) => i.id),
-  });
+  if (process.env.NODE_ENV !== "production" || process.env.MAINTENANCE_RPC_DEBUG === "1") {
+    console.info("[maintenance:rpc:result]", {
+      operation,
+      device_id,
+      issueCount: issues.length,
+      issueIds: issues.map((i) => i.id),
+    });
+  }
 
   return { device_id, issues };
 }
@@ -383,22 +385,11 @@ export async function safeMaintenanceRpcCall(
   return parseMaintenanceRpcResult(data, operation);
 }
 
-/** @deprecated Use deepSanitizeMaintenanceRpcPayload via safeMaintenanceRpcCall */
-export function sanitizeMaintenanceRpcPayload(
-  payload: Record<string, unknown>,
-  operation: "create" | "update",
-): MaintenanceRpcPayload {
-  const op: MaintenanceRpcOperation =
-    operation === "create" ? "create_maintenance_record" : "update_maintenance_record";
-  return deepSanitizeMaintenanceRpcPayload(payload, op);
-}
-
-/** @deprecated Use coerceUuidValue via deepSanitizeMaintenanceRpcPayload */
+/** Used by issues-mapper for relation UUID coercion. */
 export function extractUuidString(value: unknown, fieldName: string): string {
   return coerceUuidValue(value, fieldName, false);
 }
 
-/** @deprecated Use coerceUuidValue via deepSanitizeMaintenanceRpcPayload */
 export function extractOptionalUuidString(value: unknown, fieldName: string): string {
   return coerceUuidValue(value, fieldName, true);
 }

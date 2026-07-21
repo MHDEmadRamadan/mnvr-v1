@@ -55,7 +55,7 @@ export function isReplacementNoChange(value: unknown): boolean {
  * PostgreSQL legacy boolean columns (read path).
  * false → no change; true → changed flag without stored IMEI/SIM (data not recoverable).
  */
-function legacyDbBooleanToUi(_value: boolean): string | null {
+function legacyDbBooleanToUi(): string | null {
   return null;
 }
 
@@ -68,7 +68,7 @@ export function dbReplacementValueToUi(
   if (value === false) return null;
 
   if (typeof value === "boolean") {
-    return legacyDbBooleanToUi(value);
+    return legacyDbBooleanToUi();
   }
 
   if (typeof value === "string") {

@@ -83,16 +83,58 @@ export type IssueCreateInput = MaintenanceRecordCreateInput;
 /** Full maintenance record update payload (all related tables + relation IDs). */
 export type IssueUpdateInput = MaintenanceRecordUpdateInput;
 
+/** One or more values — arrays mean OR within the field. */
+export type TextFilterValue = string | string[];
+
+/** Optional predicates for the Issues list / export / KPIs (SQL RPC). */
 export type IssueQueryFilters = {
-  issueType?: string;
-  deviceImei?: string;
-  vehicleNumber?: string;
-  flespiStatus?: string;
-  screenStatus?: string;
-  /** Client-side full-text search across display fields. */
+  issueType?: TextFilterValue;
+  deviceImei?: TextFilterValue;
+  vehicleNumber?: TextFilterValue;
+  flespiStatus?: TextFilterValue;
+  screenStatus?: TextFilterValue;
+  /** Multi-field OR search across issues + related tables. */
   globalSearch?: string;
   createdFrom?: string;
   createdTo?: string;
+  status?: IssueWorkflowStatus;
+  vehicleDescription?: TextFilterValue;
+  deviceTickets?: TextFilterValue;
+  deviceDescription?: TextFilterValue;
+  softwareVersion?: TextFilterValue;
+  pmmSoftware?: TextFilterValue;
+  motherboardType?: TextFilterValue;
+  pmmType?: TextFilterValue;
+  ssdType?: TextFilterValue;
+  motherboardIssue?: TextFilterValue;
+  pmmIssue?: TextFilterValue;
+  ssdIssue?: TextFilterValue;
+  otherIssue?: TextFilterValue;
+  description?: TextFilterValue;
+  deviceChanged?: boolean;
+  ssd?: ReplacementSsd;
+  motherboard?: ReplacementMotherboard;
+  sataCable?: ReplacementSataCable;
+  imeiChanged?: string;
+  simChanged?: string;
+  createdBy?: string;
+  editedBy?: string;
+  dotmatrixStatus?: TextFilterValue;
+  sshStatus?: boolean;
+  diskHealth?: boolean;
+  powerOnHoursMin?: number;
+  powerOnHoursMax?: number;
+  powerCyclesMin?: number;
+  powerCyclesMax?: number;
+  powerOffCountMin?: number;
+  powerOffCountMax?: number;
+  lifetimeMin?: number;
+  lifetimeMax?: number;
+  summarySsd?: TextFilterValue;
+  storageDescription?: TextFilterValue;
+  hardwareDescription?: TextFilterValue;
+  replacementsDescription?: TextFilterValue;
+  deviceStatusDescription?: TextFilterValue;
 };
 
 export type IssueSort = {

@@ -18,22 +18,36 @@ export function useFieldSuggestions(enabled = true) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (refresh = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getAllFieldSuggestions(getAccessToken, { refresh });
-      setSuggestions(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load suggestions");
-    } finally {
-      setLoading(false);
-    }
-  }, [getAccessToken]);
+  const load = useCallback(
+    async (refresh = false) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getAllFieldSuggestions(getAccessToken, { refresh });
+        setSuggestions(data);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load suggestions");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [getAccessToken],
+  );
 
   useEffect(() => {
     if (!enabled) return;
-    void load(false);
+    let cancelled = false;
+
+    // Defer so the effect body does not synchronously call setState (React Compiler lint).
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      void load(false);
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [enabled, load]);
 
   const refresh = useCallback(async () => {

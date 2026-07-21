@@ -57,8 +57,3 @@ export function logReportQueryError(
  * - device.vehicle_id -> vehicles  (embed alias: vehicle)
  * - device_status / hardware / storage / replacements embed via device_id on child tables
  */
-export const REPORTS_RELATIONSHIP_NOTES = {
-  issuesToDevice: "device:device_id",
-  deviceToVehicles: "vehicle:vehicle_id",
-  vehiclesTable: "public.vehicles",
-} as const;

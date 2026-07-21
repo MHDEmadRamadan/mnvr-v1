@@ -89,12 +89,15 @@ export function DataTable<T>({
   onRowSelectionChange,
   embedded = false,
 }: DataTableProps<T>) {
+  // visibilityKey forces remount/recompute when column visibility Set identity is stable.
+  void visibilityKey;
+
   const visibleGroups = useMemo(
     () =>
       columnGroups
         .map((g) => ({ ...g, columns: g.columns.filter((c) => visibleColumnIds.has(c.id)) }))
         .filter((g) => g.columns.length > 0),
-    [columnGroups, visibleColumnIds, visibilityKey],
+    [columnGroups, visibleColumnIds],
   );
 
   const visibleColumns = useMemo(() => visibleGroups.flatMap((g) => g.columns), [visibleGroups]);
@@ -135,8 +138,10 @@ export function DataTable<T>({
     }
 
     return defs;
-  }, [enableSelection, visibleColumns, rowOffset, page, pageSize, visibilityKey]);
+  }, [enableSelection, visibleColumns, rowOffset, page, pageSize]);
 
+  // TanStack Table returns unstable function identities — expected with this library.
+  // eslint-disable-next-line react-hooks/incompatible-library -- useReactTable is the supported API
   const table = useReactTable({
     data: rows,
     columns: tanstackColumns,

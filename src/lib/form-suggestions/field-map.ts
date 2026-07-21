@@ -14,10 +14,12 @@ export type FormSuggestionFieldName =
   | "motherboard_issue"
   | "pmm_issue"
   | "ssd_issue"
-  | "other_issue";
+  | "other_issue"
+  | "vehicle_number"
+  | "imei";
 
 export type FieldSuggestionSource = {
-  table: "device_status" | "hardware" | "storage" | "issues";
+  table: "device_status" | "hardware" | "storage" | "issues" | "vehicles" | "device";
   column: string;
 };
 
@@ -34,6 +36,8 @@ export const FORM_SUGGESTION_FIELD_SOURCES: Record<FormSuggestionFieldName, Fiel
   pmm_issue: { table: "issues", column: "pmm_issue" },
   ssd_issue: { table: "issues", column: "ssd_issue" },
   other_issue: { table: "issues", column: "other_issue" },
+  vehicle_number: { table: "vehicles", column: "vehicle_number" },
+  imei: { table: "device", column: "imei" },
 };
 
 export const ALL_FORM_SUGGESTION_FIELDS = Object.keys(

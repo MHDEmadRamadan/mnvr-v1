@@ -44,30 +44,24 @@ export function ComboboxField({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [query, setQuery] = useState(value);
+  const [draft, setDraft] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(0);
   const [listRect, setListRect] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
-
+  const query = draft ?? value;
   const filtered = filterComboboxOptions(options, query);
   const exactMatch = options.some((o) => o.toLowerCase() === query.trim().toLowerCase());
   const canCreate = allowCustom && query.trim() !== "" && !exactMatch;
   const listItems = canCreate ? [...filtered, `__create__:${query.trim()}`] : filtered;
+  const canPortal = typeof document !== "undefined";
 
   const commit = useCallback(
     (next: string) => {
       onChange(next);
       onCommit?.(next);
-      setQuery(next);
+      setDraft(null);
       setOpen(false);
+      setListRect(null);
     },
     [onChange, onCommit],
   );
@@ -80,10 +74,7 @@ export function ComboboxField({
   }, []);
 
   useLayoutEffect(() => {
-    if (!open) {
-      setListRect(null);
-      return;
-    }
+    if (!open) return;
     updateListPosition();
     const onReposition = () => updateListPosition();
     window.addEventListener("scroll", onReposition, true);
@@ -100,6 +91,8 @@ export function ComboboxField({
       if (rootRef.current?.contains(target)) return;
       if (listRef.current?.contains(target)) return;
       setOpen(false);
+      setListRect(null);
+      setDraft(null);
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
@@ -116,7 +109,7 @@ export function ComboboxField({
   }
 
   const listbox =
-    open && listItems.length > 0 && listRect && mounted
+    open && listItems.length > 0 && listRect && canPortal
       ? createPortal(
           <ul
             ref={listRef}
@@ -182,10 +175,14 @@ export function ComboboxField({
           placeholder={placeholder ?? "Search or type…"}
           className={inputClass(error)}
           {...fieldControlAriaProps(controlId, error)}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            updateListPosition();
+          }}
           onChange={(e) => {
-            setQuery(e.target.value);
-            onChange(e.target.value);
+            const next = e.target.value;
+            setDraft(next);
+            onChange(next);
             setOpen(true);
             setHighlight(0);
           }}
@@ -193,6 +190,7 @@ export function ComboboxField({
             if (e.key === "ArrowDown") {
               e.preventDefault();
               setOpen(true);
+              updateListPosition();
               setHighlight((h) => Math.min(h + 1, Math.max(0, listItems.length - 1)));
             } else if (e.key === "ArrowUp") {
               e.preventDefault();
@@ -203,6 +201,8 @@ export function ComboboxField({
               else if (query.trim()) commit(query.trim());
             } else if (e.key === "Escape") {
               setOpen(false);
+              setListRect(null);
+              setDraft(null);
             }
           }}
           onBlur={() => {

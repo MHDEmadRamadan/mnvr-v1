@@ -34,8 +34,3 @@ export function DeviceTicketsDisplay({ value, className }: DeviceTicketsDisplayP
 
   return <span className={["break-words", className ?? ""].join(" ")}>{sanitizeText(raw)}</span>;
 }
-
-export function deviceTicketsCellText(value: string | null | undefined): string {
-  const raw = value?.trim() ?? "";
-  return raw ? sanitizeText(raw) : "—";
-}
