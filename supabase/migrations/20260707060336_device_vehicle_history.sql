@@ -1,15 +1,5 @@
--- =============================================================================
--- Migration: create device_vehicle_history (required by record_device_vehicle_assignment)
--- =============================================================================
--- Production RPCs (create_maintenance_record / update_maintenance_record) call
--- public.record_device_vehicle_assignment(), which reads/writes this table.
--- A prior migration dropped the table without removing the helper function.
--- Idempotent + safe to re-run.
--- =============================================================================
-
 begin;
 
--- device ↔ vehicle assignment audit trail
 create table if not exists public.device_vehicle_history (
   id uuid primary key default gen_random_uuid(),
   device_id uuid not null references public.device (id) on delete cascade,
@@ -24,7 +14,6 @@ create index if not exists device_vehicle_history_device_id_idx
 create index if not exists device_vehicle_history_vehicle_id_idx
   on public.device_vehicle_history (vehicle_id);
 
--- At most one active assignment row per device
 create unique index if not exists device_vehicle_history_active_device_idx
   on public.device_vehicle_history (device_id)
   where unassigned_at is null;
@@ -35,7 +24,6 @@ drop policy if exists "device_vehicle_history_select_anon" on public.device_vehi
 create policy "device_vehicle_history_select_anon"
   on public.device_vehicle_history for select to anon, authenticated using (true);
 
--- Backfill current device → vehicle assignments
 insert into public.device_vehicle_history (device_id, vehicle_id, assigned_at)
 select d.id, d.vehicle_id, coalesce(d.created_at, now())
 from public.device d
@@ -47,7 +35,6 @@ where d.vehicle_id is not null
       and h.unassigned_at is null
   );
 
--- Helper used by maintenance RPCs (re-declare for idempotency / fresh installs)
 create or replace function public.record_device_vehicle_assignment(
   p_device_id uuid,
   p_new_vehicle_id uuid
@@ -96,4 +83,4 @@ grant execute on function public.record_device_vehicle_assignment(uuid, uuid) to
 
 commit;
 
-notify pgrst, 'reload schema';
+notify pgrst, 'reload schema';;

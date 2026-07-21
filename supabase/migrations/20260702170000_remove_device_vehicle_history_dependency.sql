@@ -1,41 +1,34 @@
 -- =============================================================================
--- Migration: drop deprecated public.issues.issue_source (minimal / safe)
+-- Fix ADD/EDIT by REMOVING the orphaned device_vehicle_history dependency
 -- =============================================================================
--- Changes only:
---   1. issues_safe view — remove issue_source from SELECT
---   2. create_maintenance_record / update_maintenance_record — remove issue_source
---      column mappings only (bodies copied from 20260708_auth_profiles_rpcs.sql)
---   3. ALTER TABLE … DROP COLUMN issue_source
--- Does NOT recreate tables, migrate data, or alter unrelated RPC logic.
+-- WHY (evidence):
+--   * public.record_device_vehicle_assignment() reads/writes public.device_vehicle_history,
+--     which does NOT exist in the production schema (pulled 20260702151644_remote_schema.sql).
+--   * That function is called ONLY by create_maintenance_record (2x) and
+--     update_maintenance_record (2x). Nothing else calls it.
+--   * The application has ZERO references to record_device_vehicle_assignment,
+--     device_vehicle_history, or any device↔vehicle assignment-history feature (no query,
+--     view, report, type, or UI). The feature is unconsumed AND its table never existed,
+--     so it has never functioned. => orphaned / incomplete dependency, not intended design.
+--
+-- FIX (no new tables):
+--   Recreate create_/update_maintenance_record IDENTICAL to production EXCEPT the
+--   `perform public.record_device_vehicle_assignment(...)` calls are removed, then drop the
+--   now-unused function. This unblocks ADD/EDIT and introduces no new schema objects.
+--
+-- SAFETY: reviewed operator change; tested on a local replica of the pulled schema.
+--         Not executed against production by this repo.
 -- =============================================================================
 
-begin;
--- 1) View: drop issue_source from SELECT; all other columns unchanged.
-drop view if exists public.issues_safe;
-create view public.issues_safe as
-select
-  i.id,
-  i.device_id,
-  i.issue_type,
-  i.motherboard_issue,
-  i.pmm_issue,
-  i.ssd_issue,
-  i.other_issue,
-  i.description,
-  i.created_at,
-  d.vehicle_id as vehicle_id
-from public.issues i
-left join public.device d on d.id = i.device_id;
-grant select on public.issues_safe to anon, authenticated;
--- 2a) create_maintenance_record — production body; issue_source mapping removed only.
-create or replace function public.create_maintenance_record(p jsonb)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
+
+-- ----------------------------------------------------------------------------
+-- create_maintenance_record — production body minus record_device_vehicle_assignment
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION "public"."create_maintenance_record"("p" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
 declare
-  v_user_id uuid;
   v_vehicle_number text;
   v_imei text;
   v_vehicle_id uuid;
@@ -46,11 +39,6 @@ declare
   v_storage_id uuid;
   v_replacements_id uuid;
 begin
-  v_user_id := auth.uid();
-  if v_user_id is null or not public.is_active_user() then
-    raise exception 'AUTH:Authentication required' using errcode = 'P0001';
-  end if;
-
   v_vehicle_number := nullif(btrim(coalesce(p->>'vehicle_number', '')), '');
   v_imei := nullif(btrim(coalesce(p->>'imei', '')), '');
 
@@ -73,7 +61,6 @@ begin
 
   if v_device_id is not null then
     v_reuse_device := true;
-    perform public.record_device_vehicle_assignment(v_device_id, v_vehicle_id);
   end if;
 
   if v_reuse_device then
@@ -125,8 +112,6 @@ begin
     values (v_vehicle_id, v_imei, coalesce(p->>'device_description', ''), nullif(btrim(coalesce(p->>'device_tickets', '')), ''))
     returning id into v_device_id;
 
-    perform public.record_device_vehicle_assignment(v_device_id, v_vehicle_id);
-
     insert into public.device_status (device_id, software_version, flespi_status, screen_status, dotmatrix_status, ssh_status, pmm_software, description)
     values (v_device_id, coalesce(p->>'software_version', ''), coalesce(p->>'flespi_status', ''), coalesce(p->>'screen_status', ''), coalesce(p->>'dotmatrix_status', ''), coalesce((p->>'ssh_status')::boolean, false), nullif(p->>'pmm_software', '')::double precision, coalesce(p->>'device_status_description', ''));
 
@@ -140,22 +125,8 @@ begin
     values (v_device_id, coalesce(nullif(btrim(p->>'ssd'), ''), 'No')::public."SSD", coalesce(nullif(btrim(p->>'motherboard'), ''), 'No')::public."MOTHERBOARD", coalesce(nullif(btrim(p->>'sata_cable'), ''), 'No')::public.sata_cable, coalesce(nullif(btrim(p->>'imei_changed'), ''), 'false'), coalesce(nullif(btrim(p->>'sim_changed'), ''), 'false'), coalesce((p->>'device_changed')::boolean, false), coalesce(p->>'replacements_description', ''));
   end if;
 
-  insert into public.issues (
-    device_id, issue_type, motherboard_issue, pmm_issue, ssd_issue,
-    other_issue, description,
-    created_by, status
-  )
-  values (
-    v_device_id,
-    coalesce(p->>'issue_type', ''),
-    coalesce(p->>'motherboard_issue', ''),
-    coalesce(p->>'pmm_issue', ''),
-    coalesce(p->>'ssd_issue', ''),
-    coalesce(p->>'other_issue', ''),
-    coalesce(p->>'issue_description', ''),
-    v_user_id,
-    coalesce(nullif(btrim(p->>'status'), ''), 'open')::public.issue_status
-  );
+  insert into public.issues (device_id, issue_type, motherboard_issue, pmm_issue, ssd_issue, other_issue, description, issue_source)
+  values (v_device_id, coalesce(p->>'issue_type', ''), coalesce(p->>'motherboard_issue', ''), coalesce(p->>'pmm_issue', ''), coalesce(p->>'ssd_issue', ''), coalesce(p->>'other_issue', ''), coalesce(p->>'issue_description', ''), coalesce(p->>'issue_source', ''));
 
   return jsonb_build_object(
     'device_id', v_device_id,
@@ -167,15 +138,14 @@ begin
   );
 end;
 $$;
--- 2b) update_maintenance_record — production body; issue_source mapping removed only.
-create or replace function public.update_maintenance_record(p jsonb)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
+-- ----------------------------------------------------------------------------
+-- update_maintenance_record — production body minus record_device_vehicle_assignment
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION "public"."update_maintenance_record"("p" "jsonb") RETURNS "jsonb"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
 declare
-  v_user_id uuid;
   v_issue_id uuid;
   v_current_device_id uuid;
   v_current_vehicle_id uuid;
@@ -190,27 +160,10 @@ declare
   v_hardware_id uuid;
   v_storage_id uuid;
   v_replacements_id uuid;
-  v_old_status public.issue_status;
-  v_new_status public.issue_status;
 begin
-  v_user_id := auth.uid();
-  if v_user_id is null or not public.is_active_user() then
-    raise exception 'AUTH:Authentication required' using errcode = 'P0001';
-  end if;
-
   v_issue_id := (p->>'issue_id')::uuid;
   v_current_device_id := (p->>'device_id')::uuid;
   v_current_vehicle_id := (p->>'vehicle_id')::uuid;
-
-  select i.status into v_old_status
-  from public.issues i
-  where i.id = v_issue_id;
-
-  v_new_status := coalesce(
-    nullif(btrim(coalesce(p->>'status', '')), ''),
-    v_old_status::text,
-    'open'
-  )::public.issue_status;
 
   v_new_vehicle_number := nullif(btrim(coalesce(p->>'vehicle_number', '')), '');
   v_new_imei := nullif(btrim(coalesce(p->>'imei', '')), '');
@@ -245,14 +198,11 @@ begin
     insert into public.device (vehicle_id, imei, description, tickets)
     values (v_target_vehicle_id, v_new_imei, coalesce(p->>'device_description', ''), nullif(btrim(coalesce(p->>'device_tickets', '')), ''))
     returning id into v_target_device_id;
-    perform public.record_device_vehicle_assignment(v_target_device_id, v_target_vehicle_id);
   else
     v_target_device_id := v_current_device_id;
   end if;
 
   v_device_changed := (v_target_device_id is distinct from v_current_device_id);
-
-  perform public.record_device_vehicle_assignment(v_target_device_id, v_target_vehicle_id);
 
   update public.device
   set
@@ -298,29 +248,7 @@ begin
     insert into public.replacements (device_id, ssd, motherboard, sata_cable, imei_changed, sim_changed, device_changed, description) values (v_target_device_id, coalesce(nullif(btrim(p->>'ssd'), ''), 'No')::public."SSD", coalesce(nullif(btrim(p->>'motherboard'), ''), 'No')::public."MOTHERBOARD", coalesce(nullif(btrim(p->>'sata_cable'), ''), 'No')::public.sata_cable, coalesce(nullif(btrim(p->>'imei_changed'), ''), 'false'), coalesce(nullif(btrim(p->>'sim_changed'), ''), 'false'), coalesce((p->>'device_changed')::boolean, false), coalesce(p->>'replacements_description', ''));
   end if;
 
-  update public.issues
-  set
-    device_id = v_target_device_id,
-    issue_type = coalesce(p->>'issue_type', ''),
-    motherboard_issue = coalesce(p->>'motherboard_issue', ''),
-    pmm_issue = coalesce(p->>'pmm_issue', ''),
-    ssd_issue = coalesce(p->>'ssd_issue', ''),
-    other_issue = coalesce(p->>'other_issue', ''),
-    description = coalesce(p->>'issue_description', ''),
-    status = v_new_status,
-    resolved_by = case
-      when v_new_status = 'resolved'::public.issue_status
-        and v_old_status is distinct from 'resolved'::public.issue_status
-      then v_user_id
-      else resolved_by
-    end,
-    resolved_at = case
-      when v_new_status = 'resolved'::public.issue_status
-        and v_old_status is distinct from 'resolved'::public.issue_status
-      then now()
-      else resolved_at
-    end
-  where id = v_issue_id;
+  update public.issues set device_id = v_target_device_id, issue_type = coalesce(p->>'issue_type', ''), motherboard_issue = coalesce(p->>'motherboard_issue', ''), pmm_issue = coalesce(p->>'pmm_issue', ''), ssd_issue = coalesce(p->>'ssd_issue', ''), other_issue = coalesce(p->>'other_issue', ''), description = coalesce(p->>'issue_description', ''), issue_source = coalesce(p->>'issue_source', '') where id = v_issue_id;
 
   return jsonb_build_object(
     'device_id', v_target_device_id,
@@ -332,8 +260,8 @@ begin
   );
 end;
 $$;
--- 3) Drop the deprecated column (idempotent).
-alter table public.issues
-  drop column if exists issue_source;
-commit;
-notify pgrst, 'reload schema';
+-- ----------------------------------------------------------------------------
+-- Drop the now-unused orphaned function (references the non-existent history table).
+-- ----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS "public"."record_device_vehicle_assignment"("p_device_id" "uuid", "p_new_vehicle_id" "uuid");
+NOTIFY pgrst, 'reload schema';

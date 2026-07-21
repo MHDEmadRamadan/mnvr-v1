@@ -1,6 +1,3 @@
--- Revoke all sessions for a user by ID (service-role only).
--- admin.signOut() expects a JWT, not a user UUID — use this instead.
-
 create or replace function public.revoke_user_sessions(target_user_id uuid)
 returns void
 language plpgsql
@@ -18,4 +15,4 @@ end;
 $$;
 
 revoke all on function public.revoke_user_sessions(uuid) from public;
-grant execute on function public.revoke_user_sessions(uuid) to service_role;
+grant execute on function public.revoke_user_sessions(uuid) to service_role;;

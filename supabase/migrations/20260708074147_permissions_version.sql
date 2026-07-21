@@ -1,5 +1,3 @@
--- Permissions version tracking + realtime sync for immediate session invalidation.
-
 alter table public.profiles
   add column if not exists permissions_version bigint not null default 1;
 
@@ -28,4 +26,4 @@ begin
   alter publication supabase_realtime add table public.profiles;
 exception
   when duplicate_object then null;
-end $$;
+end $$;;

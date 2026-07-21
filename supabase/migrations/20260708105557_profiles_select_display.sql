@@ -5,4 +5,4 @@ create policy "profiles_select_display"
   using (
     public.is_active_user()
     and disabled_at is null
-  );
+  );;

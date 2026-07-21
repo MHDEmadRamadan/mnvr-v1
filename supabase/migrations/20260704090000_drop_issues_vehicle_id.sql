@@ -14,7 +14,6 @@
 -- =============================================================================
 
 begin;
-
 -- 1) Reconcile the redundant column to the authoritative value while it still exists
 --    (protects any external reader during the transition). No-op once the column is gone.
 do $$
@@ -30,7 +29,6 @@ begin
       and i.vehicle_id is distinct from d.vehicle_id;
   end if;
 end $$;
-
 -- 2) Backward-compatible view: always exposes a correct vehicle_id derived from device,
 --    so any external consumer keeps working before and after the column is dropped.
 create or replace view public.issues_safe as
@@ -48,18 +46,13 @@ select
   d.vehicle_id as vehicle_id
 from public.issues i
 left join public.device d on d.id = i.device_id;
-
 grant select on public.issues_safe to anon, authenticated;
-
 -- 3) Drop the redundant column (idempotent). The dependent FK fk_vehicle_issues is
 --    removed automatically with the column.
 alter table public.issues drop column if exists vehicle_id;
-
 commit;
-
 -- Reload PostgREST schema cache so the API reflects the change.
 notify pgrst, 'reload schema';
-
 -- =============================================================================
 -- ROLLBACK (data fully recoverable from authoritative device.vehicle_id)
 -- =============================================================================
@@ -71,4 +64,4 @@ notify pgrst, 'reload schema';
 --   from public.device d
 --   where d.id = i.device_id;
 -- commit;
--- notify pgrst, 'reload schema';
+-- notify pgrst, 'reload schema';;

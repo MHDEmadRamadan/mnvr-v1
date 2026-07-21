@@ -1,4 +1,4 @@
-alter table public.issues
+ alter table public.issues
   add column if not exists edited_at timestamptz;
 
 create index if not exists issues_edited_at_idx on public.issues (edited_at);
@@ -142,4 +142,4 @@ begin
     )
   );
 end;
-$$;
+$$;;

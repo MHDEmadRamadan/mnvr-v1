@@ -16,13 +16,10 @@
 -- =============================================================================
 
 begin;
-
 drop function if exists public.get_vehicle_by_number(text);
 drop function if exists public.coerce_replacement_ssd(text);
 drop function if exists public.coerce_replacement_motherboard(text);
 drop function if exists public.coerce_replacement_sata_cable(text);
-
 commit;
-
 -- Reload PostgREST schema cache so the API no longer advertises the RPCs.
 notify pgrst, 'reload schema';
